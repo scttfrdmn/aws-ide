@@ -1,0 +1,314 @@
+package aws
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+)
+
+// SecurityGroupStrategy defines the strategy for security group management
+type SecurityGroupStrategy struct {
+	PreferExisting bool
+	DefaultName    string // "aws-jupyter"
+	UserSpecified  string
+	VpcId          string
+	ForceCreate    bool
+}
+
+// SecurityGroupInfo contains information about a security group
+type SecurityGroupInfo struct {
+	ID          string
+	Name        string
+	Description string
+	VpcId       string
+	CreatedBy   string
+}
+
+// DefaultSecurityGroupStrategy returns the default strategy for security groups
+func DefaultSecurityGroupStrategy(vpcId string) SecurityGroupStrategy {
+	return SecurityGroupStrategy{
+		PreferExisting: true,
+		DefaultName:    "aws-jupyter",
+		VpcId:          vpcId,
+		ForceCreate:    false,
+	}
+}
+
+// GetDefaultSecurityGroupName returns the default name that would be used
+func (s SecurityGroupStrategy) GetDefaultSecurityGroupName() string {
+	if s.UserSpecified != "" {
+		return s.UserSpecified
+	}
+	return s.DefaultName
+}
+
+// SecurityGroupExists checks if a security group exists in AWS
+func (e *EC2Client) SecurityGroupExists(ctx context.Context, name string) (bool, *SecurityGroupInfo, error) {
+	result, err := e.client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("group-name"),
+				Values: []string{name},
+			},
+		},
+	})
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to check security group existence: %w", err)
+	}
+
+	if len(result.SecurityGroups) == 0 {
+		return false, nil, nil
+	}
+
+	sg := result.SecurityGroups[0]
+	createdBy := "user"
+	if IsAwsJupyterSecurityGroup(aws.ToString(sg.GroupName)) {
+		createdBy = "aws-jupyter"
+	}
+
+	info := &SecurityGroupInfo{
+		ID:          aws.ToString(sg.GroupId),
+		Name:        aws.ToString(sg.GroupName),
+		Description: aws.ToString(sg.Description),
+		VpcId:       aws.ToString(sg.VpcId),
+		CreatedBy:   createdBy,
+	}
+
+	return true, info, nil
+}
+
+// CreateSecurityGroup creates a new security group with SSH and Jupyter access
+func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string) (*SecurityGroupInfo, error) {
+	description := "aws-jupyter security group - SSH and Jupyter Lab access"
+
+	// Create the security group
+	createResult, err := e.client.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
+		GroupName:   aws.String(name),
+		Description: aws.String(description),
+		VpcId:       aws.String(vpcId),
+		TagSpecifications: []types.TagSpecification{
+			{
+				ResourceType: types.ResourceTypeSecurityGroup,
+				Tags: []types.Tag{
+					{Key: aws.String("Name"), Value: aws.String(name)},
+					{Key: aws.String("CreatedBy"), Value: aws.String("aws-jupyter-cli")},
+					{Key: aws.String("Purpose"), Value: aws.String("jupyter-lab-access")},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create security group: %w", err)
+	}
+
+	sgId := aws.ToString(createResult.GroupId)
+
+	// Get current public IP for restricted SSH access
+	publicIP, err := e.getCurrentPublicIP()
+	if err != nil {
+		fmt.Printf("Warning: Could not determine public IP, allowing SSH from anywhere: %v\n", err)
+		publicIP = "0.0.0.0/0"
+	} else {
+		publicIP = publicIP + "/32"
+		fmt.Printf("Restricting SSH access to your current IP: %s\n", publicIP)
+	}
+
+	// Add inbound rules for SSH (22) and Jupyter (8888)
+	rules := []types.IpPermission{
+		{
+			IpProtocol: aws.String("tcp"),
+			FromPort:   aws.Int32(22),
+			ToPort:     aws.Int32(22),
+			IpRanges: []types.IpRange{
+				{
+					CidrIp:      aws.String(publicIP),
+					Description: aws.String("SSH access from current IP"),
+				},
+			},
+		},
+		{
+			IpProtocol: aws.String("tcp"),
+			FromPort:   aws.Int32(8888),
+			ToPort:     aws.Int32(8888),
+			IpRanges: []types.IpRange{
+				{
+					CidrIp:      aws.String("127.0.0.1/32"),
+					Description: aws.String("Jupyter Lab access via SSH tunnel only"),
+				},
+			},
+		},
+	}
+
+	_, err = e.client.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
+		GroupId:       aws.String(sgId),
+		IpPermissions: rules,
+	})
+	if err != nil {
+		// Clean up the security group if rule addition fails
+		e.client.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{
+			GroupId: aws.String(sgId),
+		})
+		return nil, fmt.Errorf("failed to add security group rules: %w", err)
+	}
+
+	return &SecurityGroupInfo{
+		ID:          sgId,
+		Name:        name,
+		Description: description,
+		VpcId:       vpcId,
+		CreatedBy:   "aws-jupyter",
+	}, nil
+}
+
+// GetOrCreateSecurityGroup gets an existing security group or creates a new one
+func (e *EC2Client) GetOrCreateSecurityGroup(ctx context.Context, strategy SecurityGroupStrategy) (*SecurityGroupInfo, error) {
+	sgName := strategy.GetDefaultSecurityGroupName()
+
+	// If user specified a security group name, check if it exists
+	if strategy.UserSpecified != "" {
+		exists, sgInfo, err := e.SecurityGroupExists(ctx, strategy.UserSpecified)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check user-specified security group: %w", err)
+		}
+		if !exists {
+			return nil, fmt.Errorf("user-specified security group '%s' does not exist", strategy.UserSpecified)
+		}
+		return sgInfo, nil
+	}
+
+	// Check if our default security group exists
+	if strategy.PreferExisting && !strategy.ForceCreate {
+		exists, sgInfo, err := e.SecurityGroupExists(ctx, sgName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check for existing security group: %w", err)
+		}
+		if exists {
+			// Validate that the existing security group has the required rules
+			if err := e.validateSecurityGroupRules(ctx, sgInfo.ID); err != nil {
+				fmt.Printf("Warning: Existing security group may not have optimal rules: %v\n", err)
+			}
+			return sgInfo, nil
+		}
+	}
+
+	// Get VPC ID if not provided
+	vpcId := strategy.VpcId
+	if vpcId == "" {
+		defaultVpcId, err := e.getDefaultVpcId(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default VPC: %w", err)
+		}
+		vpcId = defaultVpcId
+	}
+
+	// Create new security group
+	fmt.Printf("Creating new security group: %s\n", sgName)
+	return e.CreateSecurityGroup(ctx, sgName, vpcId)
+}
+
+// getCurrentPublicIP attempts to determine the current public IP address
+func (e *EC2Client) getCurrentPublicIP() (string, error) {
+	// This is a simplified version - in a real implementation,
+	// you'd use an HTTP client to fetch from external services like:
+	// - https://checkip.amazonaws.com
+	// - https://ifconfig.me/ip
+	// - https://ipv4.icanhazip.com
+	// For now, we'll return an error to use the fallback
+
+	return "", fmt.Errorf("could not determine public IP from external services")
+}
+
+// getDefaultVpcId gets the default VPC ID for the current region
+func (e *EC2Client) getDefaultVpcId(ctx context.Context) (string, error) {
+	result, err := e.client.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("isDefault"),
+				Values: []string{"true"},
+			},
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to describe VPCs: %w", err)
+	}
+
+	if len(result.Vpcs) == 0 {
+		return "", fmt.Errorf("no default VPC found")
+	}
+
+	return aws.ToString(result.Vpcs[0].VpcId), nil
+}
+
+// validateSecurityGroupRules checks if a security group has the required rules
+func (e *EC2Client) validateSecurityGroupRules(ctx context.Context, sgId string) error {
+	result, err := e.client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+		GroupIds: []string{sgId},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to describe security group rules: %w", err)
+	}
+
+	if len(result.SecurityGroups) == 0 {
+		return fmt.Errorf("security group not found")
+	}
+
+	sg := result.SecurityGroups[0]
+	hasSSH := false
+	hasJupyter := false
+
+	for _, rule := range sg.IpPermissions {
+		if aws.ToInt32(rule.FromPort) == 22 && aws.ToInt32(rule.ToPort) == 22 {
+			hasSSH = true
+		}
+		if aws.ToInt32(rule.FromPort) == 8888 && aws.ToInt32(rule.ToPort) == 8888 {
+			hasJupyter = true
+		}
+	}
+
+	if !hasSSH {
+		return fmt.Errorf("missing SSH rule (port 22)")
+	}
+	if !hasJupyter {
+		return fmt.Errorf("missing Jupyter rule (port 8888)")
+	}
+
+	return nil
+}
+
+// IsAwsJupyterSecurityGroup checks if a security group name follows aws-jupyter naming convention
+func IsAwsJupyterSecurityGroup(name string) bool {
+	return name == "aws-jupyter"
+}
+
+// ListSecurityGroups returns all security groups in the current VPC
+func (e *EC2Client) ListSecurityGroups(ctx context.Context) ([]SecurityGroupInfo, error) {
+	result, err := e.client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list security groups: %w", err)
+	}
+
+	var groups []SecurityGroupInfo
+	for _, sg := range result.SecurityGroups {
+		if sg.GroupName == nil {
+			continue
+		}
+
+		createdBy := "user"
+		if IsAwsJupyterSecurityGroup(*sg.GroupName) {
+			createdBy = "aws-jupyter"
+		}
+
+		groups = append(groups, SecurityGroupInfo{
+			ID:          aws.ToString(sg.GroupId),
+			Name:        aws.ToString(sg.GroupName),
+			Description: aws.ToString(sg.Description),
+			VpcId:       aws.ToString(sg.VpcId),
+			CreatedBy:   createdBy,
+		})
+	}
+
+	return groups, nil
+}

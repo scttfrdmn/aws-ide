@@ -30,6 +30,11 @@ func NewEC2Client(ctx context.Context, profile string) (*EC2Client, error) {
 	}, nil
 }
 
+// GetRegion returns the current region for this client
+func (e *EC2Client) GetRegion() string {
+	return e.region
+}
+
 func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*types.Instance, error) {
 	// Get default VPC and subnet
 	subnet, err := e.getDefaultSubnet(ctx)
