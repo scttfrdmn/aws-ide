@@ -80,9 +80,68 @@ func (e *EC2Client) SecurityGroupExists(ctx context.Context, name string) (bool,
 	return true, info, nil
 }
 
-// CreateSecurityGroup creates a new security group with SSH and Jupyter access
+// CreateSecurityGroup creates a new security group with appropriate access rules
 func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string) (*SecurityGroupInfo, error) {
-	description := "aws-jupyter security group - SSH and Jupyter Lab access"
+	isSessionManager := (name == "aws-jupyter-session-manager")
+
+	var description string
+	var rules []types.IpPermission
+
+	if isSessionManager {
+		description = "aws-jupyter security group - Session Manager and Jupyter Lab access"
+		// For Session Manager, we only need Jupyter access (no SSH)
+		rules = []types.IpPermission{
+			{
+				IpProtocol: aws.String("tcp"),
+				FromPort:   aws.Int32(8888),
+				ToPort:     aws.Int32(8888),
+				IpRanges: []types.IpRange{
+					{
+						CidrIp:      aws.String("127.0.0.1/32"),
+						Description: aws.String("Jupyter Lab access via port forwarding only"),
+					},
+				},
+			},
+		}
+	} else {
+		description = "aws-jupyter security group - SSH and Jupyter Lab access"
+
+		// Get current public IP for restricted SSH access
+		publicIP, err := e.getCurrentPublicIP()
+		if err != nil {
+			fmt.Printf("Warning: Could not determine public IP, allowing SSH from anywhere: %v\n", err)
+			publicIP = "0.0.0.0/0"
+		} else {
+			publicIP = publicIP + "/32"
+			fmt.Printf("Restricting SSH access to your current IP: %s\n", publicIP)
+		}
+
+		// Add inbound rules for SSH (22) and Jupyter (8888)
+		rules = []types.IpPermission{
+			{
+				IpProtocol: aws.String("tcp"),
+				FromPort:   aws.Int32(22),
+				ToPort:     aws.Int32(22),
+				IpRanges: []types.IpRange{
+					{
+						CidrIp:      aws.String(publicIP),
+						Description: aws.String("SSH access from current IP"),
+					},
+				},
+			},
+			{
+				IpProtocol: aws.String("tcp"),
+				FromPort:   aws.Int32(8888),
+				ToPort:     aws.Int32(8888),
+				IpRanges: []types.IpRange{
+					{
+						CidrIp:      aws.String("127.0.0.1/32"),
+						Description: aws.String("Jupyter Lab access via SSH tunnel only"),
+					},
+				},
+			},
+		}
+	}
 
 	// Create the security group
 	createResult, err := e.client.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
@@ -105,42 +164,6 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string)
 	}
 
 	sgId := aws.ToString(createResult.GroupId)
-
-	// Get current public IP for restricted SSH access
-	publicIP, err := e.getCurrentPublicIP()
-	if err != nil {
-		fmt.Printf("Warning: Could not determine public IP, allowing SSH from anywhere: %v\n", err)
-		publicIP = "0.0.0.0/0"
-	} else {
-		publicIP = publicIP + "/32"
-		fmt.Printf("Restricting SSH access to your current IP: %s\n", publicIP)
-	}
-
-	// Add inbound rules for SSH (22) and Jupyter (8888)
-	rules := []types.IpPermission{
-		{
-			IpProtocol: aws.String("tcp"),
-			FromPort:   aws.Int32(22),
-			ToPort:     aws.Int32(22),
-			IpRanges: []types.IpRange{
-				{
-					CidrIp:      aws.String(publicIP),
-					Description: aws.String("SSH access from current IP"),
-				},
-			},
-		},
-		{
-			IpProtocol: aws.String("tcp"),
-			FromPort:   aws.Int32(8888),
-			ToPort:     aws.Int32(8888),
-			IpRanges: []types.IpRange{
-				{
-					CidrIp:      aws.String("127.0.0.1/32"),
-					Description: aws.String("Jupyter Lab access via SSH tunnel only"),
-				},
-			},
-		},
-	}
 
 	_, err = e.client.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
 		GroupId:       aws.String(sgId),

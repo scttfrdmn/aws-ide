@@ -1,22 +1,39 @@
 # aws-jupyter
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/scttfrdmn/aws-jupyter)](https://goreportcard.com/report/github.com/scttfrdmn/aws-jupyter)
-[![Go Version](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org/dl/)
+[![Go Version](https://img.shields.io/badge/go-1.22+-blue.svg)](https://golang.org/dl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/scttfrdmn/aws-jupyter)](https://github.com/scttfrdmn/aws-jupyter/releases)
 
 > **⚠️ UNDER ACTIVE DEVELOPMENT**: This project is currently in active development. Core functionality including AWS instance launching, SSH tunneling, and state management are being implemented. See the [project roadmap](#roadmap) and [contributing guide](CONTRIBUTING.md) to get involved.
 
-A CLI tool for quickly launching Jupyter Lab instances on AWS EC2 Graviton processors with automatic SSH tunneling and idle detection.
+A powerful CLI tool for launching secure Jupyter Lab instances on AWS EC2 Graviton processors with professional-grade networking and security features.
 
-## Features
+## 🚀 Key Features
 
-- **Zero infrastructure**: Run entirely from your laptop
-- **Graviton optimized**: Targets ARM64 instances for best price/performance
-- **Simple environments**: YAML-based environment configurations
-- **Auto-shutdown**: Configurable idle detection and hibernation support
-- **SSH tunneling**: Automatic port forwarding to localhost
-- **State management**: Track and manage multiple instances
+### **🔒 Security & Access Control**
+- **Session Manager**: Secure access without SSH keys or bastion hosts
+- **Traditional SSH**: Full SSH key management with economical reuse strategy
+- **Private Subnets**: Enterprise-grade isolation with optional NAT Gateway
+- **Smart Security Groups**: Automatic firewall rules with IP restrictions
+
+### **🏗️ Infrastructure Management**
+- **Zero Infrastructure**: Deploy from your laptop with full AWS integration
+- **Graviton Optimized**: ARM64 instances for best price/performance ratio
+- **Advanced Networking**: Public/private subnet support with NAT Gateway creation
+- **Resource Reuse**: Smart reuse of existing infrastructure to minimize costs
+
+### **⚙️ Environment System**
+- **Built-in Environments**: 6 pre-configured environments for different use cases
+- **Auto-Generation**: Create custom environments from your local Python setup
+- **YAML Configuration**: Simple, version-controlled environment definitions
+- **Package Management**: Automatic handling of system packages, pip, and Jupyter extensions
+
+### **🛠️ Developer Experience**
+- **Dry Run Mode**: Preview all changes before resource creation
+- **Cost Awareness**: Clear warnings about additional charges (NAT Gateway, etc.)
+- **Comprehensive CLI**: Full lifecycle management with intuitive commands
+- **State Tracking**: Persistent local state for managing multiple instances
 
 ## Installation
 
@@ -47,27 +64,49 @@ aws-jupyter launch --profile myprofile --region us-west-2
 
 ## Quick Start
 
+### **🔐 Secure Launch (Session Manager - Recommended)**
 ```bash
-# Launch with default data science environment
-aws-jupyter launch
+# Most secure: Private subnet with Session Manager
+aws-jupyter launch --connection session-manager --subnet-type private --create-nat-gateway
 
-# Launch with specific environment and instance type
-aws-jupyter launch --env ml-pytorch --instance-type m7g.large
+# Secure and cost-effective: Private subnet without internet
+aws-jupyter launch --connection session-manager --subnet-type private
 
-# Generate environment from your local setup
+# Session Manager with public subnet (no SSH exposure)
+aws-jupyter launch --connection session-manager
+```
+
+### **🔑 Traditional SSH Launch**
+```bash
+# Standard SSH with public subnet
+aws-jupyter launch --connection ssh
+
+# SSH with custom environment and instance type
+aws-jupyter launch --env ml-pytorch --instance-type m7g.large --connection ssh
+```
+
+### **🛠️ Key Management & Environment Tools**
+```bash
+# Manage SSH keys
+aws-jupyter key list                    # View local and AWS key pairs
+aws-jupyter key show                    # Show default key details
+aws-jupyter key validate                # Check key file permissions
+aws-jupyter key cleanup --dry-run       # Preview orphaned key cleanup
+
+# Generate custom environment from your setup
 aws-jupyter generate --name my-env --source ./my-project
 
-# List running instances
-aws-jupyter list
+# List and manage instances
+aws-jupyter list                        # Show all instances
+aws-jupyter connect i-0abc123def        # Connect to existing instance
+aws-jupyter stop i-0abc123def           # Stop with hibernation support
+aws-jupyter terminate i-0abc123def      # Terminate instance
+```
 
-# Connect to existing instance
-aws-jupyter connect i-0abc123def
-
-# Stop instance (with hibernation)
-aws-jupyter stop i-0abc123def --hibernate
-
-# Terminate instance
-aws-jupyter terminate i-0abc123def
+### **📋 Preview Changes (Dry Run)**
+```bash
+# Always preview before launching
+aws-jupyter launch --dry-run --connection session-manager --subnet-type private --create-nat-gateway
 ```
 
 ## Environments
@@ -135,16 +174,86 @@ environment_vars:
   PYTHONPATH: "/home/ubuntu/notebooks"
 ```
 
-## Configuration
+## 🔗 Connection Methods
 
-AWS credentials are managed through standard AWS credential chain (profiles, environment variables, IAM roles).
+### **Session Manager (Recommended)**
+- **No SSH keys required** - eliminates key management complexity
+- **Enhanced security** - access through AWS SSM, no direct internet exposure
+- **Audit logging** - all sessions logged in CloudTrail
+- **Works anywhere** - no bastion hosts or VPN required
+
+```bash
+# Launch with Session Manager
+aws-jupyter launch --connection session-manager
+
+# Connect to running instance
+aws ssm start-session --target i-0abc123def --profile myprofile
+```
+
+### **Traditional SSH**
+- **Full SSH access** - direct SSH connection with automatic key management
+- **Economical key reuse** - smart naming strategy (aws-jupyter-{region})
+- **Secure local storage** - private keys stored with 600 permissions
+- **IP restrictions** - security groups restrict access to your current IP
+
+```bash
+# Launch with SSH
+aws-jupyter launch --connection ssh
+
+# Connect directly
+ssh -i ~/.aws-jupyter/keys/aws-jupyter-us-west-2.pem ec2-user@1.2.3.4
+```
+
+## 🌐 Networking Options
+
+### **Public Subnets** (Default)
+- Direct internet access for package installations
+- Public IP assigned automatically
+- Best for development and testing
+
+### **Private Subnets** (Enterprise)
+- Enhanced security with no direct internet exposure
+- Requires NAT Gateway for internet access (additional cost ~$45/month)
+- Ideal for production and sensitive workloads
+
+```bash
+# Private subnet with internet access (recommended for production)
+aws-jupyter launch --subnet-type private --create-nat-gateway
+
+# Private subnet without internet (cost-effective but limited functionality)
+aws-jupyter launch --subnet-type private
+
+# Cost breakdown displayed during dry-run
+aws-jupyter launch --dry-run --subnet-type private --create-nat-gateway
+```
+
+## ⚙️ Configuration
+
+### **AWS Authentication**
+Credentials managed through standard AWS credential chain:
 
 ```bash
 # Use specific AWS profile
 aws-jupyter launch --profile research
 
+# Custom region
+aws-jupyter launch --region eu-west-1
+
 # Custom idle timeout
 aws-jupyter launch --idle-timeout 8h
+```
+
+### **Advanced Options**
+```bash
+# Combine all options
+aws-jupyter launch \
+  --connection session-manager \
+  --subnet-type private \
+  --create-nat-gateway \
+  --env deep-learning \
+  --instance-type m7g.xlarge \
+  --profile production \
+  --region us-east-1
 ```
 
 ## Custom Environments
@@ -165,13 +274,40 @@ jupyter_extensions:
   - jupyterlab
 ```
 
-## Requirements
+## 📋 Requirements
 
-- Go 1.21+
-- AWS CLI configured with appropriate permissions
-- EC2, VPC permissions for launching instances
+### **System Requirements**
+- **Go 1.22+** for building from source
+- **AWS CLI** configured with appropriate credentials
+- **Operating System**: Linux, macOS, or Windows
 
-## Roadmap
+### **AWS Permissions**
+Your AWS credentials need the following permissions:
+
+#### **Core Permissions (All Methods)**
+- `ec2:DescribeInstances`, `ec2:RunInstances`, `ec2:TerminateInstances`
+- `ec2:DescribeImages`, `ec2:DescribeInstanceTypes`
+- `ec2:DescribeVpcs`, `ec2:DescribeSubnets`
+- `ec2:CreateTags`, `ec2:DescribeTags`
+
+#### **SSH Connection Method**
+- `ec2:CreateKeyPair`, `ec2:DescribeKeyPairs`, `ec2:DeleteKeyPair`
+- `ec2:CreateSecurityGroup`, `ec2:DescribeSecurityGroups`
+- `ec2:AuthorizeSecurityGroupIngress`, `ec2:RevokeSecurityGroupIngress`
+
+#### **Session Manager Connection Method**
+- `iam:CreateRole`, `iam:GetRole`, `iam:AttachRolePolicy`
+- `iam:CreateInstanceProfile`, `iam:AddRoleToInstanceProfile`
+- `ssm:StartSession` (for connecting to instances)
+
+#### **Private Subnet with NAT Gateway**
+- `ec2:CreateNatGateway`, `ec2:DescribeNatGateways`
+- `ec2:AllocateAddress`, `ec2:DescribeAddresses`
+- `ec2:CreateRoute`, `ec2:DescribeRouteTables`
+
+**💡 Tip**: Use AWS managed policies like `PowerUserAccess` for development, or create custom policies for production.
+
+## 🗺️ Roadmap
 
 ### ✅ **Phase 1: Foundation** (Complete)
 - [x] CLI framework with Cobra commands
@@ -179,25 +315,38 @@ jupyter_extensions:
 - [x] AWS client integration and authentication
 - [x] Environment generation from local setups
 - [x] Comprehensive test coverage (74%+)
-- [x] Dry-run functionality
+- [x] Dry-run functionality for all operations
 
-### 🚧 **Phase 2: AWS Resource Management** (In Progress)
-- [ ] SSH key pair management
-- [ ] Security group setup (SSH + Jupyter ports)
-- [ ] User data script generation for environment setup
+### ✅ **Phase 2: Security & Networking** (Complete)
+- [x] **SSH Key Management**: Economical reuse strategy with secure local storage
+- [x] **Session Manager Integration**: Secure access without SSH key complexity
+- [x] **Advanced Networking**: Public/private subnet support with NAT Gateway
+- [x] **Security Groups**: Smart firewall rules for SSH and Session Manager
+- [x] **IAM Role Management**: Automatic role creation for Session Manager
 
-### 📋 **Phase 3: Instance Lifecycle** (Planned)
-- [ ] EC2 instance launching and provisioning
-- [ ] Instance state tracking and persistence
-- [ ] Stop/start/terminate functionality
+### ✅ **Phase 3: Instance Launching** (Complete)
+- [x] **EC2 Instance Launching**: Full support for both connection methods
+- [x] **Infrastructure Integration**: Security groups, subnets, IAM roles
+- [x] **Cost Awareness**: Clear warnings and dry-run previews
+- [x] **Key Management CLI**: Complete key validation and cleanup tools
 
-### 🎯 **Phase 4: Connectivity & UX** (Planned)
-- [ ] SSH tunnel management (local port forwarding)
-- [ ] Connect command for existing instances
-- [ ] Real-time status monitoring
-- [ ] Idle detection and auto-shutdown
+### 🚧 **Phase 4: User Experience** (In Progress)
+- [ ] **User Data Generation**: Environment-specific instance setup scripts
+- [ ] **Port Forwarding**: SSH tunnels and Session Manager port forwarding
+- [ ] **Instance State Tracking**: Persistent local state management
+- [ ] **Connect Command**: Easy connection to existing instances
 
-See our [Contributing Guide](CONTRIBUTING.md) to help implement these features!
+### 📋 **Phase 5: Advanced Features** (Planned)
+- [ ] **Stop/Start/Terminate**: Full instance lifecycle management
+- [ ] **Real-time Monitoring**: Instance status and resource usage
+- [ ] **Idle Detection**: Automatic shutdown based on activity
+- [ ] **Multi-Region Support**: Cross-region instance management
+- [ ] **Team Features**: Shared environments and access controls
+
+### 🎯 **Current Focus**
+Working on completing the core user experience with port forwarding, state management, and connection commands. The infrastructure foundation is solid and ready for production use.
+
+**Want to contribute?** Check our [Contributing Guide](CONTRIBUTING.md) - we welcome help with any of these features!
 
 ## Development
 

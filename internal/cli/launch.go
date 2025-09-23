@@ -184,39 +184,170 @@ func runLaunch(environment, instanceType, idleTimeout, profile, region string, d
 		fmt.Printf("Note: Region override (%s) not yet implemented, using profile region (%s)\n", region, actualRegion)
 	}
 
-	// Setup key storage
-	keyStorage, err := config.DefaultKeyStorage()
-	if err != nil {
-		return fmt.Errorf("failed to initialize key storage: %w", err)
-	}
+	var keyInfo *aws.KeyPairInfo
+	var instanceProfile *aws.InstanceProfileInfo
 
-	// Get or create SSH key pair using economical strategy
-	keyStrategy := aws.DefaultKeyPairStrategy(actualRegion)
-	keyInfo, err := ec2Client.GetOrCreateKeyPair(ctx, keyStrategy)
-	if err != nil {
-		return fmt.Errorf("failed to setup SSH key pair: %w", err)
-	}
-
-	fmt.Printf("Using SSH key pair: %s\n", keyInfo.Name)
-
-	// Save private key locally if it was newly created
-	if keyInfo.PrivateKey != "" {
-		fmt.Println("Saving SSH private key locally...")
-		if err := keyStorage.SavePrivateKey(keyInfo); err != nil {
-			return fmt.Errorf("failed to save SSH private key: %w", err)
+	// Handle connection method setup
+	if connectionMethod == "ssh" {
+		// Setup SSH key pair
+		fmt.Println("🔑 Setting up SSH key pair...")
+		keyStorage, err := config.DefaultKeyStorage()
+		if err != nil {
+			return fmt.Errorf("failed to initialize key storage: %w", err)
 		}
-		fmt.Printf("SSH private key saved to: %s\n", keyStorage.GetKeyPath(keyInfo.Name))
+
+		keyStrategy := aws.DefaultKeyPairStrategy(actualRegion)
+		keyInfo, err = ec2Client.GetOrCreateKeyPair(ctx, keyStrategy)
+		if err != nil {
+			return fmt.Errorf("failed to setup SSH key pair: %w", err)
+		}
+
+		fmt.Printf("Using SSH key pair: %s\n", keyInfo.Name)
+
+		// Save private key locally if it was newly created
+		if keyInfo.PrivateKey != "" {
+			fmt.Println("Saving SSH private key locally...")
+			if err := keyStorage.SavePrivateKey(keyInfo); err != nil {
+				return fmt.Errorf("failed to save SSH private key: %w", err)
+			}
+			fmt.Printf("SSH private key saved to: %s\n", keyStorage.GetKeyPath(keyInfo.Name))
+		} else {
+			// For existing keys, verify we have the private key locally
+			if !keyStorage.HasPrivateKey(keyInfo.Name) {
+				return fmt.Errorf("SSH key pair '%s' exists in AWS but private key not found locally", keyInfo.Name)
+			}
+			fmt.Printf("Using existing local private key: %s\n", keyStorage.GetKeyPath(keyInfo.Name))
+		}
 	} else {
-		// For existing keys, verify we have the private key locally
-		if !keyStorage.HasPrivateKey(keyInfo.Name) {
-			return fmt.Errorf("SSH key pair '%s' exists in AWS but private key not found locally", keyInfo.Name)
+		// Setup Session Manager IAM role
+		fmt.Println("🔐 Setting up Session Manager IAM role...")
+		iamClient, err := aws.NewIAMClient(ctx, profile)
+		if err != nil {
+			return fmt.Errorf("failed to create IAM client: %w", err)
 		}
-		fmt.Printf("Using existing local private key: %s\n", keyStorage.GetKeyPath(keyInfo.Name))
+
+		instanceProfile, err = iamClient.GetOrCreateSessionManagerRole(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to setup Session Manager role: %w", err)
+		}
+
+		fmt.Printf("Using IAM instance profile: %s\n", instanceProfile.Name)
 	}
 
-	// TODO: Implement security group setup, userdata generation
-	// TODO: Launch instance, setup SSH tunnel, save state
+	// Get or create appropriate subnet
+	fmt.Printf("🌐 Selecting %s subnet...\n", subnetType)
+	subnet, err := ec2Client.GetSubnet(ctx, subnetType, "")
+	if err != nil {
+		return fmt.Errorf("failed to get subnet: %w", err)
+	}
+	fmt.Printf("Using subnet: %s (%s) in %s\n", subnet.ID, subnet.CidrBlock, subnet.AvailabilityZone)
 
-	fmt.Println("Instance launched successfully!")
+	// Handle NAT Gateway for private subnets
+	var natGateway *aws.NATGatewayInfo
+	if subnetType == "private" && createNatGateway {
+		fmt.Println("🚪 Setting up NAT Gateway for internet access...")
+		natGateway, err = ec2Client.GetOrCreateNATGateway(ctx, subnet.VpcId)
+		if err != nil {
+			return fmt.Errorf("failed to setup NAT Gateway: %w", err)
+		}
+
+		// Update route tables for the private subnet
+		if err := ec2Client.UpdatePrivateSubnetRoutes(ctx, subnet.ID, natGateway.ID); err != nil {
+			return fmt.Errorf("failed to update subnet routes: %w", err)
+		}
+	}
+
+	// Setup security group
+	fmt.Println("🔒 Setting up security group...")
+	sgStrategy := aws.DefaultSecurityGroupStrategy(subnet.VpcId)
+	if connectionMethod == "session-manager" {
+		// For Session Manager, we don't need SSH access
+		sgStrategy.DefaultName = "aws-jupyter-session-manager"
+	}
+
+	securityGroup, err := ec2Client.GetOrCreateSecurityGroup(ctx, sgStrategy)
+	if err != nil {
+		return fmt.Errorf("failed to setup security group: %w", err)
+	}
+	fmt.Printf("Using security group: %s (%s)\n", securityGroup.Name, securityGroup.ID)
+
+	// Generate user data script
+	fmt.Println("📜 Generating user data script...")
+	// TODO: Implement user data generation based on environment
+
+	// Launch EC2 instance
+	fmt.Printf("🚀 Launching EC2 instance (%s)...\n", env.InstanceType)
+
+	launchParams := aws.LaunchParams{
+		AMI:             "ami-0c2d3450e51c5bfb3", // TODO: Get from environment config
+		InstanceType:    env.InstanceType,
+		SecurityGroupID: securityGroup.ID,
+		UserData:        "", // TODO: Set from user data generation
+		EBSVolumeSize:   env.EBSVolumeSize,
+		Environment:     env.Name,
+	}
+
+	// Set subnet explicitly
+	launchParams.SubnetId = subnet.ID
+
+	// Set connection-specific parameters
+	if connectionMethod == "ssh" {
+		launchParams.KeyPairName = keyInfo.Name
+	} else {
+		launchParams.InstanceProfile = instanceProfile.Name
+	}
+
+	instance, err := ec2Client.LaunchInstance(ctx, launchParams)
+	if err != nil {
+		return fmt.Errorf("failed to launch instance: %w", err)
+	}
+
+	instanceId := *instance.InstanceId
+	fmt.Printf("✓ Instance launched: %s\n", instanceId)
+
+	// Wait for instance to be running
+	fmt.Println("⏳ Waiting for instance to be running...")
+	if err := ec2Client.WaitForInstanceRunning(ctx, instanceId); err != nil {
+		return fmt.Errorf("instance failed to start: %w", err)
+	}
+
+	// Get instance details
+	instanceInfo, err := ec2Client.GetInstanceInfo(ctx, instanceId)
+	if err != nil {
+		return fmt.Errorf("failed to get instance info: %w", err)
+	}
+
+	publicIP := "N/A (private subnet)"
+	if instanceInfo.PublicIpAddress != nil {
+		publicIP = *instanceInfo.PublicIpAddress
+	}
+	privateIP := *instanceInfo.PrivateIpAddress
+
+	fmt.Println("\n🎉 Instance launched successfully!")
+	fmt.Printf("Instance ID: %s\n", instanceId)
+	fmt.Printf("Instance Type: %s\n", env.InstanceType)
+	fmt.Printf("Public IP: %s\n", publicIP)
+	fmt.Printf("Private IP: %s\n", privateIP)
+	fmt.Printf("Subnet: %s (%s)\n", subnet.ID, subnetType)
+
+	if connectionMethod == "ssh" {
+		fmt.Printf("SSH Key: %s\n", keyInfo.Name)
+		fmt.Println("\n🔗 To connect:")
+		if subnet.IsPublic {
+			fmt.Printf("ssh -i ~/.aws-jupyter/keys/%s.pem ec2-user@%s\n", keyInfo.Name, publicIP)
+		} else {
+			fmt.Println("Use Session Manager or VPN/bastion to connect to private instance")
+		}
+	} else {
+		fmt.Println("\n🔗 To connect:")
+		fmt.Printf("aws ssm start-session --target %s --profile %s\n", instanceId, profile)
+	}
+
+	fmt.Println("\n📓 Jupyter Lab will be available at: http://localhost:8888")
+	fmt.Println("Use 'aws-jupyter connect' to setup port forwarding")
+
+	// TODO: Save instance state locally
+	// TODO: Setup port forwarding
+
 	return nil
 }

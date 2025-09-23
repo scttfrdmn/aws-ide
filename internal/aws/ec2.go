@@ -36,10 +36,17 @@ func (e *EC2Client) GetRegion() string {
 }
 
 func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*types.Instance, error) {
-	// Get default VPC and subnet
-	subnet, err := e.getDefaultSubnet(ctx)
-	if err != nil {
-		return nil, err
+	// Use provided subnet or get default
+	var subnetId *string
+	if params.SubnetId != "" {
+		subnetId = aws.String(params.SubnetId)
+	} else {
+		// Fall back to default subnet
+		defaultSubnet, err := e.getDefaultSubnet(ctx)
+		if err != nil {
+			return nil, err
+		}
+		subnetId = defaultSubnet
 	}
 
 	runInput := &ec2.RunInstancesInput{
@@ -47,8 +54,7 @@ func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*t
 		InstanceType:     types.InstanceType(params.InstanceType),
 		MinCount:         aws.Int32(1),
 		MaxCount:         aws.Int32(1),
-		KeyName:          aws.String(params.KeyPairName),
-		SubnetId:         subnet,
+		SubnetId:         subnetId,
 		SecurityGroupIds: []string{params.SecurityGroupID},
 		UserData:         aws.String(params.UserData),
 		BlockDeviceMappings: []types.BlockDeviceMapping{
@@ -71,6 +77,18 @@ func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*t
 				},
 			},
 		},
+	}
+
+	// Set SSH key pair if provided (for SSH connections)
+	if params.KeyPairName != "" {
+		runInput.KeyName = aws.String(params.KeyPairName)
+	}
+
+	// Set IAM instance profile if provided (for Session Manager)
+	if params.InstanceProfile != "" {
+		runInput.IamInstanceProfile = &types.IamInstanceProfileSpecification{
+			Name: aws.String(params.InstanceProfile),
+		}
 	}
 
 	result, err := e.client.RunInstances(ctx, runInput)
@@ -169,4 +187,6 @@ type LaunchParams struct {
 	UserData        string
 	EBSVolumeSize   int
 	Environment     string
+	SubnetId        string
+	InstanceProfile string
 }

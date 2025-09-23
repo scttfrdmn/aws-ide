@@ -172,7 +172,7 @@ func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcId string) (*N
 // findExistingNATGateway looks for an existing NAT Gateway in the VPC
 func (e *EC2Client) findExistingNATGateway(ctx context.Context, vpcId string) (*NATGatewayInfo, error) {
 	result, err := e.client.DescribeNatGateways(ctx, &ec2.DescribeNatGatewaysInput{
-		Filters: []types.Filter{
+		Filter: []types.Filter{
 			{
 				Name:   aws.String("vpc-id"),
 				Values: []string{vpcId},
