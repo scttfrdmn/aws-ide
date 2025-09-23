@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/scttfrdmn/aws-jupyter)](https://github.com/scttfrdmn/aws-jupyter/releases)
 
+> **⚠️ UNDER ACTIVE DEVELOPMENT**: This project is currently in active development. Core functionality including AWS instance launching, SSH tunneling, and state management are being implemented. See the [project roadmap](#roadmap) and [contributing guide](CONTRIBUTING.md) to get involved.
+
 A CLI tool for quickly launching Jupyter Lab instances on AWS EC2 Graviton processors with automatic SSH tunneling and idle detection.
 
 ## Features
@@ -20,6 +22,27 @@ A CLI tool for quickly launching Jupyter Lab instances on AWS EC2 Graviton proce
 
 ```bash
 go install github.com/scttfrdmn/aws-jupyter@latest
+```
+
+## AWS Authentication
+
+Before using aws-jupyter, you need to configure AWS credentials. The tool supports all standard AWS authentication methods:
+
+📋 **[Complete AWS Authentication Guide →](docs/AWS_AUTHENTICATION.md)**
+
+**Quick Setup Options:**
+
+- **AWS Profiles** (Recommended): `aws configure --profile myprofile`
+- **Environment Variables**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
+- **AWS SSO**: `aws sso login --profile mysso`
+- **IAM Roles**: Automatic when running on EC2/ECS/Lambda
+
+```bash
+# Verify your AWS access
+aws sts get-caller-identity --profile myprofile
+
+# Use with aws-jupyter
+aws-jupyter launch --profile myprofile --region us-west-2
 ```
 
 ## Quick Start
@@ -147,6 +170,34 @@ jupyter_extensions:
 - Go 1.21+
 - AWS CLI configured with appropriate permissions
 - EC2, VPC permissions for launching instances
+
+## Roadmap
+
+### ✅ **Phase 1: Foundation** (Complete)
+- [x] CLI framework with Cobra commands
+- [x] Environment configuration system (6 built-in environments)
+- [x] AWS client integration and authentication
+- [x] Environment generation from local setups
+- [x] Comprehensive test coverage (74%+)
+- [x] Dry-run functionality
+
+### 🚧 **Phase 2: AWS Resource Management** (In Progress)
+- [ ] SSH key pair management
+- [ ] Security group setup (SSH + Jupyter ports)
+- [ ] User data script generation for environment setup
+
+### 📋 **Phase 3: Instance Lifecycle** (Planned)
+- [ ] EC2 instance launching and provisioning
+- [ ] Instance state tracking and persistence
+- [ ] Stop/start/terminate functionality
+
+### 🎯 **Phase 4: Connectivity & UX** (Planned)
+- [ ] SSH tunnel management (local port forwarding)
+- [ ] Connect command for existing instances
+- [ ] Real-time status monitoring
+- [ ] Idle detection and auto-shutdown
+
+See our [Contributing Guide](CONTRIBUTING.md) to help implement these features!
 
 ## Development
 

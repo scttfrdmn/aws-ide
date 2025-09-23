@@ -1,0 +1,93 @@
+name: ❓ Question or Support
+description: Ask a question or get help using aws-jupyter
+title: "[Question]: "
+labels: ["question", "help-wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your question! Please provide as much context as possible so we can help you effectively.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: |
+        Ask your question here. Be as specific as possible.
+        Examples:
+        - "How do I configure custom Python packages in an environment?"
+        - "What AWS permissions does aws-jupyter need?"
+        - "How do I connect to an instance using a different SSH key?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question Category
+      description: What area is your question about?
+      options:
+        - "Getting Started / Installation"
+        - "AWS Authentication & Permissions"
+        - "Environment Configuration"
+        - "CLI Commands & Usage"
+        - "Troubleshooting"
+        - "Development & Contributing"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What Have You Tried?
+      description: What steps have you already taken to solve this?
+      placeholder: |
+        Describe what you've already tried:
+        - Commands you've run
+        - Documentation you've read
+        - Error messages you've encountered
+        - Configurations you've tested
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & Environment
+      description: Help us understand your setup
+      placeholder: |
+        Provide relevant context:
+        - Operating system (macOS, Linux, Windows)
+        - aws-jupyter version (`aws-jupyter --version`)
+        - AWS region you're using
+        - Authentication method (profile, SSO, etc.)
+        - Any relevant error messages
+    validations:
+      required: false
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: What Are You Trying to Accomplish?
+      description: What's your end goal or use case?
+      placeholder: |
+        Help us understand the bigger picture:
+        - What type of work are you doing with Jupyter?
+        - What AWS resources do you need?
+        - Any specific requirements or constraints?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and discussions
+          required: true
+        - label: I have read the README and documentation
+          required: true
+        - label: I have verified my AWS credentials work (`aws sts get-caller-identity`)
+          required: false

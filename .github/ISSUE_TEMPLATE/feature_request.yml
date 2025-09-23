@@ -1,0 +1,134 @@
+name: ✨ Feature Request
+description: Suggest an idea or enhancement for aws-jupyter
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible to help us understand your needs.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: What problem would this feature solve? What use case would it enable?
+      placeholder: |
+        Describe the problem you're trying to solve or the use case you want to enable.
+        Examples:
+        - "I want to launch instances with custom AMIs"
+        - "I need to connect to instances using different SSH ports"
+        - "I want to automatically install additional software packages"
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: What would you like to see implemented?
+      placeholder: |
+        Describe your ideal solution. How would you like this feature to work?
+        Examples:
+        - "Add a --custom-ami flag to the launch command"
+        - "Add ssh_port configuration to environment files"
+        - "Add a post_install_script section to environments"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative approaches?
+      placeholder: |
+        Describe any alternative solutions or workarounds you've considered.
+        This helps us understand the broader context and find the best approach.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - "Critical - Blocking my use of aws-jupyter"
+        - "High - Would significantly improve my workflow"
+        - "Medium - Would be nice to have"
+        - "Low - Minor improvement"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of Impact
+      description: Which part of aws-jupyter would this feature affect?
+      options:
+        - "CLI Commands (launch, list, connect, etc.)"
+        - "Environment Configuration"
+        - "AWS Integration (EC2, networking, etc.)"
+        - "SSH Tunneling & Connectivity"
+        - "Instance Management"
+        - "Documentation"
+        - "Development/Testing"
+        - "Other (please specify in additional context)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Usage
+      description: How would users interact with this feature?
+      placeholder: |
+        Show examples of how this feature would be used:
+
+        ```bash
+        # Example command usage
+        aws-jupyter launch --custom-ami ami-12345 --env my-env
+
+        # Example configuration
+        # environments/my-env.yaml
+        custom_ami: ami-12345
+        ssh_port: 2222
+        ```
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help us understand this request
+      placeholder: |
+        - Links to similar features in other tools
+        - Specific AWS services or features this relates to
+        - Any constraints or requirements to consider
+        - Screenshots or mockups (if applicable)
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help implement this feature
+          required: false
+        - label: I would be willing to help test this feature
+          required: false
+        - label: I would be willing to help document this feature
+          required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have checked the project roadmap to see if this is already planned
+          required: true

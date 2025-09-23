@@ -1,0 +1,127 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us investigate.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened and what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Run command '...'
+        2. See error '...'
+        3. Expected '...'
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command Used
+      description: The exact aws-jupyter command that caused the issue
+      placeholder: "aws-jupyter launch --env data-science --profile myprofile"
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Command Output
+      description: Complete output from the command (including error messages)
+      placeholder: Paste the full output here
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: aws-jupyter Version
+      description: Output of `aws-jupyter --version`
+      placeholder: "v0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      options:
+        - macOS (Intel)
+        - macOS (Apple Silicon)
+        - Linux (x64)
+        - Linux (ARM64)
+        - Windows (x64)
+        - Windows (ARM64)
+        - Other (please specify in additional context)
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go Version
+      description: Output of `go version` (if building from source)
+      placeholder: "go version go1.21.0 darwin/arm64"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: aws-auth
+    attributes:
+      label: AWS Authentication Method
+      description: How are you authenticating with AWS?
+      options:
+        - AWS Profile (aws configure)
+        - Environment Variables
+        - AWS SSO
+        - IAM Role (EC2/ECS/Lambda)
+        - Other (please specify)
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: |
+        - AWS region you're using
+        - Any relevant AWS permissions/policies
+        - Environment configuration being used
+        - Any workarounds you've found
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I am using the latest version of aws-jupyter
+          required: true
+        - label: I have verified my AWS credentials are working (`aws sts get-caller-identity`)
+          required: false
