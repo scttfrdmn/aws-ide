@@ -1,0 +1,119 @@
+version: 2
+
+project_name: aws-jupyter
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - main: ./cmd/aws-jupyter
+    binary: aws-jupyter
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - '^build:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: scttfrdmn
+    name: aws-jupyter
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Release {{ .Tag }} ({{ .Date }})
+
+    Welcome to this new release!
+
+  footer: |
+    ## Docker Images
+
+    Docker images are available at `ghcr.io/scttfrdmn/aws-jupyter:{{ .Tag }}`
+
+    ## Thanks!
+
+    Those were the changes on {{ .Tag }}!
+
+brews:
+  - name: aws-jupyter
+    repository:
+      owner: scttfrdmn
+      name: homebrew-tap
+    directory: Formula
+    homepage: https://github.com/scttfrdmn/aws-jupyter
+    description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
+    license: MIT
+    test: |
+      system "#{bin}/aws-jupyter --version"
+    dependencies:
+      - name: awscli
+        type: optional
+    install: |
+      bin.install "aws-jupyter"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/scttfrdmn/aws-jupyter:{{ .Tag }}"
+      - "ghcr.io/scttfrdmn/aws-jupyter:v{{ .Major }}"
+      - "ghcr.io/scttfrdmn/aws-jupyter:v{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/scttfrdmn/aws-jupyter:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    extra_files:
+      - environments/

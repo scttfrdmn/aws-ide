@@ -1,0 +1,35 @@
+name: "R Statistics"
+instance_type: "r7g.large"
+ami_base: "ubuntu22-arm64"
+ebs_volume_size: 25
+packages:
+  - r-base
+  - r-base-dev
+  - python3-pip
+  - jupyter
+  - git
+  - htop
+  - awscli
+  - build-essential
+  - gfortran
+  - libcurl4-openssl-dev
+  - libssl-dev
+  - libxml2-dev
+pip_packages:
+  - jupyterlab
+  - rpy2
+  - notebook
+  - ipywidgets
+jupyter_extensions:
+  - jupyterlab
+r_packages:
+  - IRkernel
+  - tidyverse
+  - ggplot2
+  - dplyr
+  - shiny
+  - plotly
+  - DT
+  - devtools
+environment_vars:
+  R_LIBS_USER: "/home/ubuntu/R"
