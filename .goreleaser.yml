@@ -1,0 +1,80 @@
+project_name: aws-jupyter
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/aws-jupyter
+    binary: aws-jupyter
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: scttfrdmn
+    name: aws-jupyter
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  header: |
+    ## Installation
+
+    Download the appropriate binary for your system from the assets below.
+
+    ### Quick Install (Linux/macOS)
+    ```bash
+    # Download and install (replace VERSION and OS/ARCH as needed)
+    curl -L https://github.com/scttfrdmn/aws-jupyter/releases/download/v{{.Version}}/aws-jupyter_{{.Version}}_$(uname -s)_$(uname -m).tar.gz | tar xz
+    sudo mv aws-jupyter /usr/local/bin/
+    ```
+
+    ### Using Go
+    ```bash
+    go install github.com/scttfrdmn/aws-jupyter@v{{.Version}}
+    ```

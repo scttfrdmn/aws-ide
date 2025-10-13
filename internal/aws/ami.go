@@ -1,0 +1,176 @@
+package aws
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+)
+
+// AMISelector handles AMI selection based on region and architecture
+type AMISelector struct {
+	region string
+}
+
+// NewAMISelector creates a new AMI selector for the given region
+func NewAMISelector(region string) *AMISelector {
+	return &AMISelector{region: region}
+}
+
+// GetAMI returns the appropriate AMI ID for the given base configuration
+func (a *AMISelector) GetAMI(ctx context.Context, client *EC2Client, amiBase string) (string, error) {
+	// Map of AMI base names to Ubuntu versions and architectures
+	switch amiBase {
+	case "ubuntu22-arm64":
+		return a.findUbuntuAMI(ctx, client, "22.04", "arm64")
+	case "ubuntu22-x86_64":
+		return a.findUbuntuAMI(ctx, client, "22.04", "x86_64")
+	case "ubuntu20-arm64":
+		return a.findUbuntuAMI(ctx, client, "20.04", "arm64")
+	case "ubuntu20-x86_64":
+		return a.findUbuntuAMI(ctx, client, "20.04", "x86_64")
+	case "amazonlinux2-arm64":
+		return a.findAmazonLinuxAMI(ctx, client, "2", "arm64")
+	case "amazonlinux2-x86_64":
+		return a.findAmazonLinuxAMI(ctx, client, "2", "x86_64")
+	default:
+		// Default to Ubuntu 22.04 ARM64 for Graviton instances
+		return a.findUbuntuAMI(ctx, client, "22.04", "arm64")
+	}
+}
+
+// findUbuntuAMI finds the latest Ubuntu AMI for the given version and architecture
+func (a *AMISelector) findUbuntuAMI(ctx context.Context, client *EC2Client, version, arch string) (string, error) {
+	// Ubuntu AMI name pattern
+	namePattern := fmt.Sprintf("ubuntu/images/hvm-ssd/ubuntu-*-%s-server-*", version)
+
+	var archType types.ArchitectureValues
+	if arch == "arm64" {
+		archType = types.ArchitectureValuesArm64
+	} else {
+		archType = types.ArchitectureValuesX8664
+	}
+
+	result, err := client.client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("name"),
+				Values: []string{namePattern},
+			},
+			{
+				Name:   aws.String("architecture"),
+				Values: []string{string(archType)},
+			},
+			{
+				Name:   aws.String("state"),
+				Values: []string{"available"},
+			},
+			{
+				Name:   aws.String("owner-id"),
+				Values: []string{"099720109477"}, // Canonical's AWS account
+			},
+		},
+		Owners: []string{"099720109477"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to query Ubuntu AMIs: %w", err)
+	}
+
+	if len(result.Images) == 0 {
+		return "", fmt.Errorf("no Ubuntu %s %s AMIs found in region %s", version, arch, a.region)
+	}
+
+	// Find the most recent AMI by creation date
+	var newestAMI *types.Image
+	for i := range result.Images {
+		img := &result.Images[i]
+		if newestAMI == nil || aws.ToString(img.CreationDate) > aws.ToString(newestAMI.CreationDate) {
+			newestAMI = img
+		}
+	}
+
+	amiID := aws.ToString(newestAMI.ImageId)
+	fmt.Printf("Selected Ubuntu %s %s AMI: %s (%s)\n", version, arch, amiID, aws.ToString(newestAMI.Name))
+	return amiID, nil
+}
+
+// findAmazonLinuxAMI finds the latest Amazon Linux AMI
+func (a *AMISelector) findAmazonLinuxAMI(ctx context.Context, client *EC2Client, version, arch string) (string, error) {
+	// Amazon Linux AMI name pattern
+	namePattern := "amzn2-ami-hvm-*"
+
+	var archType types.ArchitectureValues
+	if arch == "arm64" {
+		archType = types.ArchitectureValuesArm64
+		namePattern = "amzn2-ami-hvm-*-arm64-gp2"
+	} else {
+		archType = types.ArchitectureValuesX8664
+		namePattern = "amzn2-ami-hvm-*-x86_64-gp2"
+	}
+
+	result, err := client.client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("name"),
+				Values: []string{namePattern},
+			},
+			{
+				Name:   aws.String("architecture"),
+				Values: []string{string(archType)},
+			},
+			{
+				Name:   aws.String("state"),
+				Values: []string{"available"},
+			},
+			{
+				Name:   aws.String("owner-id"),
+				Values: []string{"137112412989"}, // Amazon's AWS account
+			},
+		},
+		Owners: []string{"137112412989"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to query Amazon Linux AMIs: %w", err)
+	}
+
+	if len(result.Images) == 0 {
+		return "", fmt.Errorf("no Amazon Linux %s %s AMIs found in region %s", version, arch, a.region)
+	}
+
+	// Find the most recent AMI
+	var newestAMI *types.Image
+	for i := range result.Images {
+		img := &result.Images[i]
+		if newestAMI == nil || aws.ToString(img.CreationDate) > aws.ToString(newestAMI.CreationDate) {
+			newestAMI = img
+		}
+	}
+
+	amiID := aws.ToString(newestAMI.ImageId)
+	fmt.Printf("Selected Amazon Linux %s %s AMI: %s (%s)\n", version, arch, amiID, aws.ToString(newestAMI.Name))
+	return amiID, nil
+}
+
+// GetDefaultAMI returns a hardcoded fallback AMI for the region (Ubuntu 22.04 ARM64)
+func (a *AMISelector) GetDefaultAMI() string {
+	// These are fallback AMIs - we should always try to find the latest first
+	fallbackAMIs := map[string]string{
+		"us-east-1":      "ami-0c2d3450e51c5bfb3",
+		"us-east-2":      "ami-0a8b4cd432b1c3063",
+		"us-west-1":      "ami-0cbd8f37d14e0b6e8",
+		"us-west-2":      "ami-0d70546e43a941d70",
+		"eu-west-1":      "ami-0d71ea30463e0ff8d",
+		"eu-central-1":   "ami-0dcc0ebde7b2e00db",
+		"ap-southeast-1": "ami-0dc2d3e4c0f9ebd18",
+		"ap-northeast-1": "ami-0f15f40e8caf0f662",
+	}
+
+	if ami, ok := fallbackAMIs[a.region]; ok {
+		return ami
+	}
+
+	// Return us-west-2 as ultimate fallback
+	return fallbackAMIs["us-west-2"]
+}

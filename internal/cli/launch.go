@@ -271,18 +271,31 @@ func runLaunch(environment, instanceType, idleTimeout, profile, region string, d
 	}
 	fmt.Printf("Using security group: %s (%s)\n", securityGroup.Name, securityGroup.ID)
 
+	// Select AMI based on environment configuration
+	fmt.Println("🔍 Selecting AMI for environment...")
+	amiSelector := aws.NewAMISelector(actualRegion)
+	amiID, err := amiSelector.GetAMI(ctx, ec2Client, env.AMIBase)
+	if err != nil {
+		fmt.Printf("Warning: Could not find latest AMI (%v), using fallback\n", err)
+		amiID = amiSelector.GetDefaultAMI()
+		fmt.Printf("Using fallback AMI: %s\n", amiID)
+	}
+
 	// Generate user data script
 	fmt.Println("📜 Generating user data script...")
-	// TODO: Implement user data generation based on environment
+	userData, err := config.GenerateUserData(env)
+	if err != nil {
+		return fmt.Errorf("failed to generate user data: %w", err)
+	}
 
 	// Launch EC2 instance
 	fmt.Printf("🚀 Launching EC2 instance (%s)...\n", env.InstanceType)
 
 	launchParams := aws.LaunchParams{
-		AMI:             "ami-0c2d3450e51c5bfb3", // TODO: Get from environment config
+		AMI:             amiID,
 		InstanceType:    env.InstanceType,
 		SecurityGroupID: securityGroup.ID,
-		UserData:        "", // TODO: Set from user data generation
+		UserData:        userData,
 		EBSVolumeSize:   env.EBSVolumeSize,
 		Environment:     env.Name,
 	}
