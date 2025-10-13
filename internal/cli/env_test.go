@@ -24,12 +24,16 @@ func TestRunEnvList(t *testing.T) {
 	err := runEnvList()
 
 	// Restore stdout
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatalf("Failed to close pipe: %v", err)
+	}
 	os.Stdout = oldStdout
 
 	// Read output
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("Failed to read output: %v", err)
+	}
 	output := buf.String()
 
 	// Check result
@@ -64,12 +68,16 @@ func TestRunEnvValidate_Valid(t *testing.T) {
 	err := runEnvValidate("data-science")
 
 	// Restore stdout
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatalf("Failed to close pipe: %v", err)
+	}
 	os.Stdout = oldStdout
 
 	// Read output
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("Failed to read output: %v", err)
+	}
 	output := buf.String()
 
 	// Check result

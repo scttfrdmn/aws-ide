@@ -171,9 +171,12 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string)
 	})
 	if err != nil {
 		// Clean up the security group if rule addition fails
-		e.client.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{
+		if _, deleteErr := e.client.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{
 			GroupId: aws.String(sgId),
-		})
+		}); deleteErr != nil {
+			// Log cleanup failure but return original error
+			fmt.Printf("Warning: Failed to delete security group after error: %v\n", deleteErr)
+		}
 		return nil, fmt.Errorf("failed to add security group rules: %w", err)
 	}
 

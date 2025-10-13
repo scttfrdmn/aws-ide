@@ -146,9 +146,12 @@ func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcId string) (*N
 	})
 	if err != nil {
 		// Clean up the allocated EIP if NAT Gateway creation fails
-		e.client.ReleaseAddress(ctx, &ec2.ReleaseAddressInput{
+		if _, releaseErr := e.client.ReleaseAddress(ctx, &ec2.ReleaseAddressInput{
 			AllocationId: eipResult.AllocationId,
-		})
+		}); releaseErr != nil {
+			// Log cleanup failure but return original error
+			fmt.Printf("Warning: Failed to release Elastic IP after error: %v\n", releaseErr)
+		}
 		return nil, fmt.Errorf("failed to create NAT Gateway: %w", err)
 	}
 

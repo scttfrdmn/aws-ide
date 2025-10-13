@@ -50,21 +50,23 @@ func TestNewEC2Client_InvalidCredentials(t *testing.T) {
 	originalSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	originalRegion := os.Getenv("AWS_REGION")
 
-	os.Unsetenv("AWS_ACCESS_KEY_ID")
-	os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-	os.Setenv("AWS_REGION", "us-west-2")
+	_ = os.Unsetenv("AWS_ACCESS_KEY_ID")
+	_ = os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+	if err := os.Setenv("AWS_REGION", "us-west-2"); err != nil {
+		t.Fatalf("Failed to set AWS_REGION: %v", err)
+	}
 
 	defer func() {
 		if originalAccessKey != "" {
-			os.Setenv("AWS_ACCESS_KEY_ID", originalAccessKey)
+			_ = os.Setenv("AWS_ACCESS_KEY_ID", originalAccessKey)
 		}
 		if originalSecretKey != "" {
-			os.Setenv("AWS_SECRET_ACCESS_KEY", originalSecretKey)
+			_ = os.Setenv("AWS_SECRET_ACCESS_KEY", originalSecretKey)
 		}
 		if originalRegion != "" {
-			os.Setenv("AWS_REGION", originalRegion)
+			_ = os.Setenv("AWS_REGION", originalRegion)
 		} else {
-			os.Unsetenv("AWS_REGION")
+			_ = os.Unsetenv("AWS_REGION")
 		}
 	}()
 

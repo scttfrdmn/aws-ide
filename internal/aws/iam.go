@@ -216,9 +216,12 @@ func (i *IAMClient) createInstanceProfile(ctx context.Context, profileName, role
 	})
 	if err != nil {
 		// Clean up the instance profile if adding role fails
-		i.client.DeleteInstanceProfile(ctx, &iam.DeleteInstanceProfileInput{
+		if _, deleteErr := i.client.DeleteInstanceProfile(ctx, &iam.DeleteInstanceProfileInput{
 			InstanceProfileName: aws.String(profileName),
-		})
+		}); deleteErr != nil {
+			// Log cleanup failure but return original error
+			fmt.Printf("Warning: Failed to cleanup instance profile after error: %v\n", deleteErr)
+		}
 		return nil, fmt.Errorf("failed to add role to instance profile: %w", err)
 	}
 

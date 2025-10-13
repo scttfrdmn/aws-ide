@@ -132,9 +132,12 @@ func (ks *KeyStorage) DeletePrivateKey(keyName string) error {
 		return fmt.Errorf("failed to delete private key: %w", err)
 	}
 
-	// Also try to delete public key if it exists
+	// Also try to delete public key if it exists (best-effort cleanup)
 	pubKeyPath := ks.GetPublicKeyPath(keyName)
-	os.Remove(pubKeyPath) // Ignore errors for public key
+	if err := os.Remove(pubKeyPath); err != nil && !os.IsNotExist(err) {
+		// Log warning but don't fail - public key cleanup is optional
+		fmt.Printf("Warning: Failed to delete public key %s: %v\n", pubKeyPath, err)
+	}
 
 	return nil
 }

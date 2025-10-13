@@ -48,12 +48,16 @@ func TestRunList_NoInstances(t *testing.T) {
 	err := runList()
 
 	// Restore stdout
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatalf("Failed to close pipe: %v", err)
+	}
 	os.Stdout = oldStdout
 
 	// Read output
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("Failed to read output: %v", err)
+	}
 	output := buf.String()
 
 	// Check result
@@ -136,11 +140,15 @@ func captureListOutput() (string, error) {
 
 	err := runList()
 
-	w.Close()
+	if closeErr := w.Close(); closeErr != nil {
+		return "", closeErr
+	}
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, readErr := buf.ReadFrom(r); readErr != nil {
+		return "", readErr
+	}
 	return buf.String(), err
 }
 

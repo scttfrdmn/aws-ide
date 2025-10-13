@@ -98,9 +98,8 @@ func (a *AMISelector) findUbuntuAMI(ctx context.Context, client *EC2Client, vers
 
 // findAmazonLinuxAMI finds the latest Amazon Linux AMI
 func (a *AMISelector) findAmazonLinuxAMI(ctx context.Context, client *EC2Client, version, arch string) (string, error) {
-	// Amazon Linux AMI name pattern
-	namePattern := "amzn2-ami-hvm-*"
-
+	// Amazon Linux AMI name pattern based on architecture
+	var namePattern string
 	var archType types.ArchitectureValues
 	if arch == "arm64" {
 		archType = types.ArchitectureValuesArm64
