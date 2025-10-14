@@ -12,8 +12,8 @@ func TestRunEnvList(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Capture output
 	oldStdout := os.Stdout
@@ -114,8 +114,8 @@ func TestRunEnvValidate_Invalid(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Run env validate command with invalid environment
 	err := runEnvValidate("non-existent-env")

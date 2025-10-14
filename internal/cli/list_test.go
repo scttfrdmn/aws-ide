@@ -36,8 +36,8 @@ func TestRunList_NoInstances(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Capture output
 	oldStdout := os.Stdout
@@ -91,8 +91,8 @@ func TestRunList_WithInstances(t *testing.T) {
 func setupTestEnvironment(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	t.Cleanup(func() { os.Setenv("HOME", originalHome) })
+	_ = os.Setenv("HOME", tmpDir)
+	t.Cleanup(func() { _ = os.Setenv("HOME", originalHome) })
 
 	configDir := config.GetConfigDir()
 	err := os.MkdirAll(configDir, 0755)
@@ -191,8 +191,8 @@ func TestRunList_StateLoadError(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Create config directory
 	configDir := config.GetConfigDir()

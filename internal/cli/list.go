@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewListCmd creates the list command for viewing active instances
 func NewListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",

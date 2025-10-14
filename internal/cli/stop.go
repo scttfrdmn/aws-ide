@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewStopCmd creates the stop command for stopping running instances
 func NewStopCmd() *cobra.Command {
 	var hibernate bool
 

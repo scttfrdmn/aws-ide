@@ -93,8 +93,8 @@ func TestNewEC2Client_WithValidRegion(t *testing.T) {
 	ctx := context.Background()
 
 	// Set minimal environment for testing
-	os.Setenv("AWS_REGION", "us-east-1")
-	defer os.Unsetenv("AWS_REGION")
+	_ = os.Setenv("AWS_REGION", "us-east-1")
+	defer func() { _ = os.Unsetenv("AWS_REGION") }()
 
 	// Create client (may succeed even without real credentials)
 	client, err := NewEC2Client(ctx, "default")

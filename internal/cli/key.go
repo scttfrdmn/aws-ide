@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewKeyCmd creates the key command for managing SSH key pairs
 func NewKeyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "key",

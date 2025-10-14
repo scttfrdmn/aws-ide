@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewTerminateCmd creates the terminate command for permanently terminating instances
 func NewTerminateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "terminate INSTANCE_ID",

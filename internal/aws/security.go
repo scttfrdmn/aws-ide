@@ -14,7 +14,7 @@ type SecurityGroupStrategy struct {
 	PreferExisting bool
 	DefaultName    string // "aws-jupyter"
 	UserSpecified  string
-	VpcId          string
+	VpcID          string
 	ForceCreate    bool
 }
 
@@ -23,16 +23,16 @@ type SecurityGroupInfo struct {
 	ID          string
 	Name        string
 	Description string
-	VpcId       string
+	VpcID       string
 	CreatedBy   string
 }
 
 // DefaultSecurityGroupStrategy returns the default strategy for security groups
-func DefaultSecurityGroupStrategy(vpcId string) SecurityGroupStrategy {
+func DefaultSecurityGroupStrategy(vpcID string) SecurityGroupStrategy {
 	return SecurityGroupStrategy{
 		PreferExisting: true,
 		DefaultName:    "aws-jupyter",
-		VpcId:          vpcId,
+		VpcID:          vpcID,
 		ForceCreate:    false,
 	}
 }
@@ -73,7 +73,7 @@ func (e *EC2Client) SecurityGroupExists(ctx context.Context, name string) (bool,
 		ID:          aws.ToString(sg.GroupId),
 		Name:        aws.ToString(sg.GroupName),
 		Description: aws.ToString(sg.Description),
-		VpcId:       aws.ToString(sg.VpcId),
+		VpcID:       aws.ToString(sg.VpcId),
 		CreatedBy:   createdBy,
 	}
 
@@ -81,7 +81,7 @@ func (e *EC2Client) SecurityGroupExists(ctx context.Context, name string) (bool,
 }
 
 // CreateSecurityGroup creates a new security group with appropriate access rules
-func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string) (*SecurityGroupInfo, error) {
+func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcID string) (*SecurityGroupInfo, error) {
 	isSessionManager := (name == "aws-jupyter-session-manager")
 
 	var description string
@@ -147,7 +147,7 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string)
 	createResult, err := e.client.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
 		GroupName:   aws.String(name),
 		Description: aws.String(description),
-		VpcId:       aws.String(vpcId),
+		VpcId:       aws.String(vpcID),
 		TagSpecifications: []types.TagSpecification{
 			{
 				ResourceType: types.ResourceTypeSecurityGroup,
@@ -163,16 +163,16 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string)
 		return nil, fmt.Errorf("failed to create security group: %w", err)
 	}
 
-	sgId := aws.ToString(createResult.GroupId)
+	sgID := aws.ToString(createResult.GroupId)
 
 	_, err = e.client.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
-		GroupId:       aws.String(sgId),
+		GroupId:       aws.String(sgID),
 		IpPermissions: rules,
 	})
 	if err != nil {
 		// Clean up the security group if rule addition fails
 		if _, deleteErr := e.client.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{
-			GroupId: aws.String(sgId),
+			GroupId: aws.String(sgID),
 		}); deleteErr != nil {
 			// Log cleanup failure but return original error
 			fmt.Printf("Warning: Failed to delete security group after error: %v\n", deleteErr)
@@ -181,10 +181,10 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcId string)
 	}
 
 	return &SecurityGroupInfo{
-		ID:          sgId,
+		ID:          sgID,
 		Name:        name,
 		Description: description,
-		VpcId:       vpcId,
+		VpcID:       vpcID,
 		CreatedBy:   "aws-jupyter",
 	}, nil
 }
@@ -221,18 +221,18 @@ func (e *EC2Client) GetOrCreateSecurityGroup(ctx context.Context, strategy Secur
 	}
 
 	// Get VPC ID if not provided
-	vpcId := strategy.VpcId
-	if vpcId == "" {
-		defaultVpcId, err := e.getDefaultVpcId(ctx)
+	vpcID := strategy.VpcID
+	if vpcID == "" {
+		defaultVpcID, err := e.getDefaultVpcID(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get default VPC: %w", err)
 		}
-		vpcId = defaultVpcId
+		vpcID = defaultVpcID
 	}
 
 	// Create new security group
 	fmt.Printf("Creating new security group: %s\n", sgName)
-	return e.CreateSecurityGroup(ctx, sgName, vpcId)
+	return e.CreateSecurityGroup(ctx, sgName, vpcID)
 }
 
 // getCurrentPublicIP attempts to determine the current public IP address
@@ -247,8 +247,8 @@ func (e *EC2Client) getCurrentPublicIP() (string, error) {
 	return "", fmt.Errorf("could not determine public IP from external services")
 }
 
-// getDefaultVpcId gets the default VPC ID for the current region
-func (e *EC2Client) getDefaultVpcId(ctx context.Context) (string, error) {
+// getDefaultVpcID gets the default VPC ID for the current region
+func (e *EC2Client) getDefaultVpcID(ctx context.Context) (string, error) {
 	result, err := e.client.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
 		Filters: []types.Filter{
 			{
@@ -269,9 +269,9 @@ func (e *EC2Client) getDefaultVpcId(ctx context.Context) (string, error) {
 }
 
 // validateSecurityGroupRules checks if a security group has the required rules
-func (e *EC2Client) validateSecurityGroupRules(ctx context.Context, sgId string) error {
+func (e *EC2Client) validateSecurityGroupRules(ctx context.Context, sgID string) error {
 	result, err := e.client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
-		GroupIds: []string{sgId},
+		GroupIds: []string{sgID},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to describe security group rules: %w", err)
@@ -331,7 +331,7 @@ func (e *EC2Client) ListSecurityGroups(ctx context.Context) ([]SecurityGroupInfo
 			ID:          aws.ToString(sg.GroupId),
 			Name:        aws.ToString(sg.GroupName),
 			Description: aws.ToString(sg.Description),
-			VpcId:       aws.ToString(sg.VpcId),
+			VpcID:       aws.ToString(sg.VpcId),
 			CreatedBy:   createdBy,
 		})
 	}

@@ -11,11 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
+// EC2Client wraps the AWS EC2 SDK client with convenience methods for managing instances
 type EC2Client struct {
 	client *ec2.Client
 	region string
 }
 
+// NewEC2Client creates a new EC2 client using the specified AWS profile
 func NewEC2Client(ctx context.Context, profile string) (*EC2Client, error) {
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithSharedConfigProfile(profile),
@@ -35,18 +37,19 @@ func (e *EC2Client) GetRegion() string {
 	return e.region
 }
 
+// LaunchInstance launches a new EC2 instance with the specified parameters
 func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*types.Instance, error) {
 	// Use provided subnet or get default
-	var subnetId *string
-	if params.SubnetId != "" {
-		subnetId = aws.String(params.SubnetId)
+	var subnetID *string
+	if params.SubnetID != "" {
+		subnetID = aws.String(params.SubnetID)
 	} else {
 		// Fall back to default subnet
 		defaultSubnet, err := e.getDefaultSubnet(ctx)
 		if err != nil {
 			return nil, err
 		}
-		subnetId = defaultSubnet
+		subnetID = defaultSubnet
 	}
 
 	runInput := &ec2.RunInstancesInput{
@@ -54,7 +57,7 @@ func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*t
 		InstanceType:     types.InstanceType(params.InstanceType),
 		MinCount:         aws.Int32(1),
 		MaxCount:         aws.Int32(1),
-		SubnetId:         subnetId,
+		SubnetId:         subnetID,
 		SecurityGroupIds: []string{params.SecurityGroupID},
 		UserData:         aws.String(params.UserData),
 		BlockDeviceMappings: []types.BlockDeviceMapping{
@@ -141,6 +144,7 @@ func (e *EC2Client) getDefaultSubnet(ctx context.Context) (*string, error) {
 	return subnets.Subnets[0].SubnetId, nil
 }
 
+// WaitForInstanceRunning waits for an EC2 instance to reach the running state with a 5 minute timeout
 func (e *EC2Client) WaitForInstanceRunning(ctx context.Context, instanceID string) error {
 	waiter := ec2.NewInstanceRunningWaiter(e.client)
 	return waiter.Wait(ctx, &ec2.DescribeInstancesInput{
@@ -148,6 +152,7 @@ func (e *EC2Client) WaitForInstanceRunning(ctx context.Context, instanceID strin
 	}, 5*time.Minute)
 }
 
+// GetInstanceInfo retrieves detailed information about a specific EC2 instance
 func (e *EC2Client) GetInstanceInfo(ctx context.Context, instanceID string) (*types.Instance, error) {
 	result, err := e.client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceID},
@@ -163,6 +168,7 @@ func (e *EC2Client) GetInstanceInfo(ctx context.Context, instanceID string) (*ty
 	return &result.Reservations[0].Instances[0], nil
 }
 
+// StopInstance stops a running EC2 instance with optional hibernation support
 func (e *EC2Client) StopInstance(ctx context.Context, instanceID string, hibernate bool) error {
 	input := &ec2.StopInstancesInput{
 		InstanceIds: []string{instanceID},
@@ -172,6 +178,7 @@ func (e *EC2Client) StopInstance(ctx context.Context, instanceID string, hiberna
 	return err
 }
 
+// TerminateInstance permanently terminates an EC2 instance
 func (e *EC2Client) TerminateInstance(ctx context.Context, instanceID string) error {
 	_, err := e.client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
 		InstanceIds: []string{instanceID},
@@ -179,6 +186,7 @@ func (e *EC2Client) TerminateInstance(ctx context.Context, instanceID string) er
 	return err
 }
 
+// LaunchParams contains all parameters needed to launch a new EC2 instance
 type LaunchParams struct {
 	AMI             string
 	InstanceType    string
@@ -187,6 +195,6 @@ type LaunchParams struct {
 	UserData        string
 	EBSVolumeSize   int
 	Environment     string
-	SubnetId        string
+	SubnetID        string
 	InstanceProfile string
 }

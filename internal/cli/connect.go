@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewConnectCmd creates the connect command for setting up SSH tunnels to Jupyter instances
 func NewConnectCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "connect INSTANCE_ID",

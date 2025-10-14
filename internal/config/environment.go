@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Environment defines a complete configuration for a Jupyter instance including packages and settings
 type Environment struct {
 	Name              string            `yaml:"name"`
 	InstanceType      string            `yaml:"instance_type"`
@@ -20,6 +21,7 @@ type Environment struct {
 	EnvironmentVars   map[string]string `yaml:"environment_vars"`
 }
 
+// LoadEnvironment loads an environment configuration by name from built-in or user configs
 func LoadEnvironment(name string) (*Environment, error) {
 	// Try user config first, then built-in
 	userPath := filepath.Join(GetConfigDir(), "environments", name+".yaml")
@@ -47,6 +49,7 @@ func LoadEnvironment(name string) (*Environment, error) {
 	return &env, nil
 }
 
+// ListEnvironments returns a list of all available environment names from built-in and user configs
 func ListEnvironments() ([]string, error) {
 	var envs []string
 

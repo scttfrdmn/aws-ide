@@ -22,8 +22,8 @@ func TestEnsureConfigDir(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	err := EnsureConfigDir()
 	if err != nil {
@@ -46,8 +46,8 @@ func TestLoadState_NewState(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	state, err := LoadState()
 	if err != nil {
@@ -75,8 +75,8 @@ func TestLoadState_ExistingState(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Create config directory
 	configDir := GetConfigDir()
@@ -149,8 +149,8 @@ func TestLocalState_Save(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Create config directory
 	configDir := GetConfigDir()
@@ -205,8 +205,8 @@ func TestLoadState_InvalidJSON(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Create config directory
 	configDir := GetConfigDir()

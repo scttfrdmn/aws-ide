@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Instance represents a tracked EC2 instance with its metadata
 type Instance struct {
 	ID            string    `json:"id"`
 	Environment   string    `json:"environment"`
@@ -20,21 +21,25 @@ type Instance struct {
 	SecurityGroup string    `json:"security_group"`
 }
 
+// LocalState manages the local state file tracking active instances
 type LocalState struct {
 	Instances map[string]*Instance `json:"instances"`
 	KeyPairs  map[string]string    `json:"key_pairs"` // name -> private key path
 }
 
+// GetConfigDir returns the path to the aws-jupyter configuration directory
 func GetConfigDir() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".aws-jupyter")
 }
 
+// EnsureConfigDir creates the configuration directory if it doesn't exist
 func EnsureConfigDir() error {
 	configDir := GetConfigDir()
 	return os.MkdirAll(filepath.Join(configDir, "environments"), 0755)
 }
 
+// LoadState loads the local state file or creates a new one if it doesn't exist
 func LoadState() (*LocalState, error) {
 	statePath := filepath.Join(GetConfigDir(), "state.json")
 
@@ -65,6 +70,7 @@ func LoadState() (*LocalState, error) {
 	return &state, nil
 }
 
+// Save writes the current state to the local state file
 func (s *LocalState) Save() error {
 	statePath := filepath.Join(GetConfigDir(), "state.json")
 	data, err := json.MarshalIndent(s, "", "  ")

@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewStatusCmd creates the status command for checking instance status
 func NewStatusCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status INSTANCE_ID",

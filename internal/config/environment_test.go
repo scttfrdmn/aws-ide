@@ -44,8 +44,8 @@ func TestLoadEnvironment_UserOverride(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Create user config directory
 	configDir := GetConfigDir()
@@ -103,8 +103,8 @@ func TestLoadEnvironment_NotFound(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Try to load non-existent environment
 	_, err := LoadEnvironment("non-existent-env")
@@ -122,8 +122,8 @@ func TestLoadEnvironment_InvalidYAML(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Create user config directory
 	configDir := GetConfigDir()
@@ -152,8 +152,8 @@ func TestListEnvironments(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// List environments (should work even if empty)
 	_, err := ListEnvironments()
@@ -211,8 +211,8 @@ func TestListEnvironments_NoDuplicates(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Create user config directory
 	configDir := GetConfigDir()

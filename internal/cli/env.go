@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewEnvCmd creates the env command for managing environment configurations
 func NewEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "env",
@@ -18,6 +19,7 @@ func NewEnvCmd() *cobra.Command {
 	return cmd
 }
 
+// NewEnvListCmd creates the list subcommand for viewing available environments
 func NewEnvListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
@@ -28,6 +30,7 @@ func NewEnvListCmd() *cobra.Command {
 	}
 }
 
+// NewEnvValidateCmd creates the validate subcommand for checking environment configuration validity
 func NewEnvValidateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate ENV_NAME",

@@ -16,6 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// NewGenerateCmd creates the generate command for creating environment configs from local Python projects
 func NewGenerateCmd() *cobra.Command {
 	var (
 		source        string

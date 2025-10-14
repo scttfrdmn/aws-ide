@@ -15,7 +15,7 @@ import (
 // SubnetInfo contains information about a subnet
 type SubnetInfo struct {
 	ID               string
-	VpcId            string
+	VpcID            string
 	AvailabilityZone string
 	CidrBlock        string
 	IsPublic         bool
@@ -24,19 +24,19 @@ type SubnetInfo struct {
 // NATGatewayInfo contains information about a NAT Gateway
 type NATGatewayInfo struct {
 	ID       string
-	SubnetId string
-	VpcId    string
+	SubnetID string
+	VpcID    string
 	State    string
 }
 
 // GetSubnet finds an appropriate subnet based on the subnet type preference
-func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, vpcId string) (*SubnetInfo, error) {
-	if vpcId == "" {
-		defaultVpcId, err := e.getDefaultVpcId(ctx)
+func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, vpcID string) (*SubnetInfo, error) {
+	if vpcID == "" {
+		defaultVpcID, err := e.getDefaultVpcID(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get default VPC: %w", err)
 		}
-		vpcId = defaultVpcId
+		vpcID = defaultVpcID
 	}
 
 	// Describe subnets in the VPC
@@ -44,7 +44,7 @@ func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, vpcId stri
 		Filters: []types.Filter{
 			{
 				Name:   aws.String("vpc-id"),
-				Values: []string{vpcId},
+				Values: []string{vpcID},
 			},
 		},
 	})
@@ -53,7 +53,7 @@ func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, vpcId stri
 	}
 
 	if len(result.Subnets) == 0 {
-		return nil, fmt.Errorf("no subnets found in VPC %s", vpcId)
+		return nil, fmt.Errorf("no subnets found in VPC %s", vpcID)
 	}
 
 	// Find the best subnet based on type preference
@@ -82,7 +82,7 @@ func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, vpcId stri
 
 	return &SubnetInfo{
 		ID:               aws.ToString(bestSubnet.SubnetId),
-		VpcId:            aws.ToString(bestSubnet.VpcId),
+		VpcID:            aws.ToString(bestSubnet.VpcId),
 		AvailabilityZone: aws.ToString(bestSubnet.AvailabilityZone),
 		CidrBlock:        aws.ToString(bestSubnet.CidrBlock),
 		IsPublic:         aws.ToBool(bestSubnet.MapPublicIpOnLaunch),
@@ -90,9 +90,9 @@ func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, vpcId stri
 }
 
 // GetOrCreateNATGateway creates a NAT Gateway if it doesn't exist for the VPC
-func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcId string) (*NATGatewayInfo, error) {
+func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcID string) (*NATGatewayInfo, error) {
 	// First, check if a NAT Gateway already exists in this VPC
-	existing, err := e.findExistingNATGateway(ctx, vpcId)
+	existing, err := e.findExistingNATGateway(ctx, vpcID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing NAT Gateway: %w", err)
 	}
@@ -102,7 +102,7 @@ func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcId string) (*N
 	}
 
 	// Find a public subnet for the NAT Gateway
-	publicSubnet, err := e.GetSubnet(ctx, "public", vpcId)
+	publicSubnet, err := e.GetSubnet(ctx, "public", vpcID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find public subnet for NAT Gateway: %w", err)
 	}
@@ -157,8 +157,8 @@ func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcId string) (*N
 
 	natGateway := &NATGatewayInfo{
 		ID:       aws.ToString(natResult.NatGateway.NatGatewayId),
-		SubnetId: publicSubnet.ID,
-		VpcId:    vpcId,
+		SubnetID: publicSubnet.ID,
+		VpcID:    vpcID,
 		State:    string(natResult.NatGateway.State),
 	}
 
@@ -173,12 +173,12 @@ func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcId string) (*N
 }
 
 // findExistingNATGateway looks for an existing NAT Gateway in the VPC
-func (e *EC2Client) findExistingNATGateway(ctx context.Context, vpcId string) (*NATGatewayInfo, error) {
+func (e *EC2Client) findExistingNATGateway(ctx context.Context, vpcID string) (*NATGatewayInfo, error) {
 	result, err := e.client.DescribeNatGateways(ctx, &ec2.DescribeNatGatewaysInput{
 		Filter: []types.Filter{
 			{
 				Name:   aws.String("vpc-id"),
-				Values: []string{vpcId},
+				Values: []string{vpcID},
 			},
 			{
 				Name:   aws.String("state"),
@@ -198,8 +198,8 @@ func (e *EC2Client) findExistingNATGateway(ctx context.Context, vpcId string) (*
 	ng := result.NatGateways[0]
 	return &NATGatewayInfo{
 		ID:       aws.ToString(ng.NatGatewayId),
-		SubnetId: aws.ToString(ng.SubnetId),
-		VpcId:    aws.ToString(ng.VpcId),
+		SubnetID: aws.ToString(ng.SubnetId),
+		VpcID:    aws.ToString(ng.VpcId),
 		State:    string(ng.State),
 	}, nil
 }
@@ -245,13 +245,13 @@ func (e *EC2Client) waitForNATGatewayAvailable(ctx context.Context, natGatewayID
 }
 
 // UpdatePrivateSubnetRoutes updates the route table for private subnets to use the NAT Gateway
-func (e *EC2Client) UpdatePrivateSubnetRoutes(ctx context.Context, subnetId, natGatewayId string) error {
+func (e *EC2Client) UpdatePrivateSubnetRoutes(ctx context.Context, subnetID, natGatewayID string) error {
 	// Find the route table associated with this subnet
 	routeTables, err := e.client.DescribeRouteTables(ctx, &ec2.DescribeRouteTablesInput{
 		Filters: []types.Filter{
 			{
 				Name:   aws.String("association.subnet-id"),
-				Values: []string{subnetId},
+				Values: []string{subnetID},
 			},
 		},
 	})
@@ -259,10 +259,10 @@ func (e *EC2Client) UpdatePrivateSubnetRoutes(ctx context.Context, subnetId, nat
 		return fmt.Errorf("failed to find route table for subnet: %w", err)
 	}
 
-	var routeTableId string
+	var routeTableID string
 	if len(routeTables.RouteTables) == 0 {
 		// Use the main route table if no specific association
-		vpcId, err := e.getVpcIdFromSubnet(ctx, subnetId)
+		vpcID, err := e.getVpcIDFromSubnet(ctx, subnetID)
 		if err != nil {
 			return fmt.Errorf("failed to get VPC ID: %w", err)
 		}
@@ -271,7 +271,7 @@ func (e *EC2Client) UpdatePrivateSubnetRoutes(ctx context.Context, subnetId, nat
 			Filters: []types.Filter{
 				{
 					Name:   aws.String("vpc-id"),
-					Values: []string{vpcId},
+					Values: []string{vpcID},
 				},
 				{
 					Name:   aws.String("association.main"),
@@ -287,17 +287,17 @@ func (e *EC2Client) UpdatePrivateSubnetRoutes(ctx context.Context, subnetId, nat
 			return fmt.Errorf("no main route table found")
 		}
 
-		routeTableId = aws.ToString(mainRouteTables.RouteTables[0].RouteTableId)
+		routeTableID = aws.ToString(mainRouteTables.RouteTables[0].RouteTableId)
 	} else {
-		routeTableId = aws.ToString(routeTables.RouteTables[0].RouteTableId)
+		routeTableID = aws.ToString(routeTables.RouteTables[0].RouteTableId)
 	}
 
 	// Add route to the NAT Gateway for internet access (0.0.0.0/0)
-	fmt.Printf("Adding NAT Gateway route to route table %s\n", routeTableId)
+	fmt.Printf("Adding NAT Gateway route to route table %s\n", routeTableID)
 	_, err = e.client.CreateRoute(ctx, &ec2.CreateRouteInput{
-		RouteTableId:         aws.String(routeTableId),
+		RouteTableId:         aws.String(routeTableID),
 		DestinationCidrBlock: aws.String("0.0.0.0/0"),
-		NatGatewayId:         aws.String(natGatewayId),
+		NatGatewayId:         aws.String(natGatewayID),
 	})
 	if err != nil {
 		// Route might already exist, check if it's just a duplicate
@@ -313,10 +313,10 @@ func (e *EC2Client) UpdatePrivateSubnetRoutes(ctx context.Context, subnetId, nat
 	return nil
 }
 
-// getVpcIdFromSubnet gets the VPC ID for a given subnet
-func (e *EC2Client) getVpcIdFromSubnet(ctx context.Context, subnetId string) (string, error) {
+// getVpcIDFromSubnet gets the VPC ID for a given subnet
+func (e *EC2Client) getVpcIDFromSubnet(ctx context.Context, subnetID string) (string, error) {
 	result, err := e.client.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
-		SubnetIds: []string{subnetId},
+		SubnetIds: []string{subnetID},
 	})
 	if err != nil {
 		return "", err
