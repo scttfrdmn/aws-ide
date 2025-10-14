@@ -9,6 +9,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
+const (
+	createdByUser       = "user"
+	createdByAwsJupyter = "aws-jupyter"
+	defaultSGName       = "aws-jupyter"
+
+	// Port numbers
+	portSSH     = 22
+	portJupyter = 8888
+)
+
 // SecurityGroupStrategy defines the strategy for security group management
 type SecurityGroupStrategy struct {
 	PreferExisting bool
@@ -31,7 +41,7 @@ type SecurityGroupInfo struct {
 func DefaultSecurityGroupStrategy(vpcID string) SecurityGroupStrategy {
 	return SecurityGroupStrategy{
 		PreferExisting: true,
-		DefaultName:    "aws-jupyter",
+		DefaultName:    defaultSGName,
 		VpcID:          vpcID,
 		ForceCreate:    false,
 	}
@@ -64,9 +74,9 @@ func (e *EC2Client) SecurityGroupExists(ctx context.Context, name string) (bool,
 	}
 
 	sg := result.SecurityGroups[0]
-	createdBy := "user"
+	createdBy := createdByUser
 	if IsAwsJupyterSecurityGroup(aws.ToString(sg.GroupName)) {
-		createdBy = "aws-jupyter"
+		createdBy = createdByAwsJupyter
 	}
 
 	info := &SecurityGroupInfo{
@@ -93,8 +103,8 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcID string)
 		rules = []types.IpPermission{
 			{
 				IpProtocol: aws.String("tcp"),
-				FromPort:   aws.Int32(8888),
-				ToPort:     aws.Int32(8888),
+				FromPort:   aws.Int32(portJupyter),
+				ToPort:     aws.Int32(portJupyter),
 				IpRanges: []types.IpRange{
 					{
 						CidrIp:      aws.String("127.0.0.1/32"),
@@ -120,8 +130,8 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcID string)
 		rules = []types.IpPermission{
 			{
 				IpProtocol: aws.String("tcp"),
-				FromPort:   aws.Int32(22),
-				ToPort:     aws.Int32(22),
+				FromPort:   aws.Int32(portSSH),
+				ToPort:     aws.Int32(portSSH),
 				IpRanges: []types.IpRange{
 					{
 						CidrIp:      aws.String(publicIP),
@@ -131,8 +141,8 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcID string)
 			},
 			{
 				IpProtocol: aws.String("tcp"),
-				FromPort:   aws.Int32(8888),
-				ToPort:     aws.Int32(8888),
+				FromPort:   aws.Int32(portJupyter),
+				ToPort:     aws.Int32(portJupyter),
 				IpRanges: []types.IpRange{
 					{
 						CidrIp:      aws.String("127.0.0.1/32"),
@@ -185,7 +195,7 @@ func (e *EC2Client) CreateSecurityGroup(ctx context.Context, name, vpcID string)
 		Name:        name,
 		Description: description,
 		VpcID:       vpcID,
-		CreatedBy:   "aws-jupyter",
+		CreatedBy:   createdByAwsJupyter,
 	}, nil
 }
 
@@ -286,19 +296,19 @@ func (e *EC2Client) validateSecurityGroupRules(ctx context.Context, sgID string)
 	hasJupyter := false
 
 	for _, rule := range sg.IpPermissions {
-		if aws.ToInt32(rule.FromPort) == 22 && aws.ToInt32(rule.ToPort) == 22 {
+		if aws.ToInt32(rule.FromPort) == portSSH && aws.ToInt32(rule.ToPort) == portSSH {
 			hasSSH = true
 		}
-		if aws.ToInt32(rule.FromPort) == 8888 && aws.ToInt32(rule.ToPort) == 8888 {
+		if aws.ToInt32(rule.FromPort) == portJupyter && aws.ToInt32(rule.ToPort) == portJupyter {
 			hasJupyter = true
 		}
 	}
 
 	if !hasSSH {
-		return fmt.Errorf("missing SSH rule (port 22)")
+		return fmt.Errorf("missing SSH rule (port %d)", portSSH)
 	}
 	if !hasJupyter {
-		return fmt.Errorf("missing Jupyter rule (port 8888)")
+		return fmt.Errorf("missing Jupyter rule (port %d)", portJupyter)
 	}
 
 	return nil
@@ -306,7 +316,7 @@ func (e *EC2Client) validateSecurityGroupRules(ctx context.Context, sgID string)
 
 // IsAwsJupyterSecurityGroup checks if a security group name follows aws-jupyter naming convention
 func IsAwsJupyterSecurityGroup(name string) bool {
-	return name == "aws-jupyter"
+	return name == defaultSGName
 }
 
 // ListSecurityGroups returns all security groups in the current VPC
@@ -322,9 +332,9 @@ func (e *EC2Client) ListSecurityGroups(ctx context.Context) ([]SecurityGroupInfo
 			continue
 		}
 
-		createdBy := "user"
+		createdBy := createdByUser
 		if IsAwsJupyterSecurityGroup(*sg.GroupName) {
-			createdBy = "aws-jupyter"
+			createdBy = createdByAwsJupyter
 		}
 
 		groups = append(groups, SecurityGroupInfo{

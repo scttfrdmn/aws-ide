@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+const (
+	// File and directory permissions for config
+	permConfigDir   = 0755 // Owner rwx, others rx (rwxr-xr-x)
+	permStateFile   = 0600 // Owner read/write only (rw-------)
+)
+
 // Instance represents a tracked EC2 instance with its metadata
 type Instance struct {
 	ID            string    `json:"id"`
@@ -36,7 +42,7 @@ func GetConfigDir() string {
 // EnsureConfigDir creates the configuration directory if it doesn't exist
 func EnsureConfigDir() error {
 	configDir := GetConfigDir()
-	return os.MkdirAll(filepath.Join(configDir, "environments"), 0755)
+	return os.MkdirAll(filepath.Join(configDir, "environments"), permConfigDir)
 }
 
 // LoadState loads the local state file or creates a new one if it doesn't exist
@@ -77,5 +83,5 @@ func (s *LocalState) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(statePath, data, 0600)
+	return os.WriteFile(statePath, data, permStateFile)
 }

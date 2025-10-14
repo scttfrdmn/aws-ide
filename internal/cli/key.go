@@ -27,22 +27,18 @@ func NewKeyCmd() *cobra.Command {
 }
 
 func newKeyListCmd() *cobra.Command {
-	var (
-		profile string
-		region  string
-	)
+	var profile string
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List SSH key pairs",
 		Long:  "List both locally stored and AWS key pairs",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKeyList(profile, region)
+			return runKeyList(profile)
 		},
 	}
 
 	cmd.Flags().StringVarP(&profile, "profile", "p", "default", "AWS profile to use")
-	cmd.Flags().StringVarP(&region, "region", "r", "", "AWS region")
 
 	return cmd
 }
@@ -50,7 +46,6 @@ func newKeyListCmd() *cobra.Command {
 func newKeyCleanupCmd() *cobra.Command {
 	var (
 		profile string
-		region  string
 		dryRun  bool
 	)
 
@@ -59,12 +54,11 @@ func newKeyCleanupCmd() *cobra.Command {
 		Short: "Clean up orphaned local keys",
 		Long:  "Remove locally stored private keys that no longer exist in AWS",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKeyCleanup(profile, region, dryRun)
+			return runKeyCleanup(profile, dryRun)
 		},
 	}
 
 	cmd.Flags().StringVarP(&profile, "profile", "p", "default", "AWS profile to use")
-	cmd.Flags().StringVarP(&region, "region", "r", "", "AWS region")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be cleaned up")
 
 	return cmd
@@ -84,10 +78,7 @@ func newKeyValidateCmd() *cobra.Command {
 }
 
 func newKeyShowCmd() *cobra.Command {
-	var (
-		profile string
-		region  string
-	)
+	var profile string
 
 	cmd := &cobra.Command{
 		Use:   "show [key-name]",
@@ -99,17 +90,16 @@ func newKeyShowCmd() *cobra.Command {
 			if len(args) > 0 {
 				keyName = args[0]
 			}
-			return runKeyShow(keyName, profile, region)
+			return runKeyShow(keyName, profile)
 		},
 	}
 
 	cmd.Flags().StringVarP(&profile, "profile", "p", "default", "AWS profile to use")
-	cmd.Flags().StringVarP(&region, "region", "r", "", "AWS region")
 
 	return cmd
 }
 
-func runKeyList(profile, region string) error {
+func runKeyList(profile string) error {
 	ctx := context.Background()
 
 	// Setup key storage
@@ -177,7 +167,7 @@ func runKeyList(profile, region string) error {
 	return nil
 }
 
-func runKeyCleanup(profile, region string, dryRun bool) error {
+func runKeyCleanup(profile string, dryRun bool) error {
 	ctx := context.Background()
 
 	keyStorage, err := config.DefaultKeyStorage()
@@ -252,7 +242,7 @@ func runKeyValidate() error {
 	return nil
 }
 
-func runKeyShow(keyName, profile, region string) error {
+func runKeyShow(keyName, profile string) error {
 	ctx := context.Background()
 
 	keyStorage, err := config.DefaultKeyStorage()

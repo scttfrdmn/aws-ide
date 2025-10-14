@@ -10,6 +10,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	connectionMethodSSH            = "ssh"
+	connectionMethodSessionManager = "session-manager"
+	subnetTypePublic               = "public"
+	subnetTypePrivate              = "private"
+)
+
 // NewLaunchCmd creates the launch command for starting new Jupyter instances
 func NewLaunchCmd() *cobra.Command {
 	var (
@@ -86,11 +93,11 @@ func loadAndValidateEnvironment(environment, instanceType string) (*config.Envir
 
 // validateLaunchOptions validates connection method and subnet type
 func validateLaunchOptions(connectionMethod, subnetType string) error {
-	if connectionMethod != "ssh" && connectionMethod != "session-manager" {
-		return fmt.Errorf("connection method must be 'ssh' or 'session-manager'")
+	if connectionMethod != connectionMethodSSH && connectionMethod != connectionMethodSessionManager {
+		return fmt.Errorf("connection method must be '%s' or '%s'", connectionMethodSSH, connectionMethodSessionManager)
 	}
-	if subnetType != "public" && subnetType != "private" {
-		return fmt.Errorf("subnet type must be 'public' or 'private'")
+	if subnetType != subnetTypePublic && subnetType != subnetTypePrivate {
+		return fmt.Errorf("subnet type must be '%s' or '%s'", subnetTypePublic, subnetTypePrivate)
 	}
 	return nil
 }
@@ -98,7 +105,7 @@ func validateLaunchOptions(connectionMethod, subnetType string) error {
 // displayLaunchWarnings shows relevant warnings about the selected configuration
 func displayLaunchWarnings(connectionMethod, subnetType string, createNatGateway bool) {
 	// Warn about private subnet implications
-	if subnetType == "private" && !createNatGateway {
+	if subnetType == subnetTypePrivate && !createNatGateway {
 		fmt.Println("⚠️  Warning: Private subnet without NAT Gateway means limited internet access")
 		fmt.Println("   - Package installations may fail")
 		fmt.Println("   - Jupyter extensions may not work")
@@ -106,9 +113,9 @@ func displayLaunchWarnings(connectionMethod, subnetType string, createNatGateway
 	}
 
 	// Session Manager information
-	if connectionMethod == "session-manager" {
+	if connectionMethod == connectionMethodSessionManager {
 		fmt.Println("ℹ️  Using Session Manager connection (no SSH keys needed)")
-		if subnetType == "public" {
+		if subnetType == subnetTypePublic {
 			fmt.Println("   - Instance will be in public subnet but without SSH access")
 		}
 	}
@@ -202,7 +209,7 @@ func setupAWSClient(ctx context.Context, profile, region string) (*aws.EC2Client
 
 // setupAuthentication configures SSH or Session Manager authentication
 func setupAuthentication(ctx context.Context, ec2Client *aws.EC2Client, profile, region, connectionMethod string) (*aws.KeyPairInfo, *aws.InstanceProfileInfo, error) {
-	if connectionMethod == "ssh" {
+	if connectionMethod == connectionMethodSSH {
 		return setupSSHAuthentication(ctx, ec2Client, region)
 	}
 	return setupSessionManagerAuthentication(ctx, profile)
@@ -269,7 +276,7 @@ func setupNetworking(ctx context.Context, ec2Client *aws.EC2Client, subnetType s
 	}
 	fmt.Printf("Using subnet: %s (%s) in %s\n", subnet.ID, subnet.CidrBlock, subnet.AvailabilityZone)
 
-	if subnetType == "private" && createNatGateway {
+	if subnetType == subnetTypePrivate && createNatGateway {
 		if err := setupNATGateway(ctx, ec2Client, subnet); err != nil {
 			return nil, err
 		}
@@ -299,7 +306,7 @@ func setupSecurityGroup(ctx context.Context, ec2Client *aws.EC2Client, vpcID, co
 	fmt.Println("🔒 Setting up security group...")
 
 	sgStrategy := aws.DefaultSecurityGroupStrategy(vpcID)
-	if connectionMethod == "session-manager" {
+	if connectionMethod == connectionMethodSessionManager {
 		sgStrategy.DefaultName = "aws-jupyter-session-manager"
 	}
 
@@ -347,7 +354,7 @@ func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env
 		SubnetID:        subnet.ID,
 	}
 
-	if connectionMethod == "ssh" {
+	if connectionMethod == connectionMethodSSH {
 		launchParams.KeyPairName = keyInfo.Name
 	} else {
 		launchParams.InstanceProfile = instanceProfile.Name
@@ -385,7 +392,7 @@ func displayInstanceInfo(instance *types.Instance, env *config.Environment, subn
 	fmt.Printf("Private IP: %s\n", privateIP)
 	fmt.Printf("Subnet: %s (%s)\n", subnet.ID, subnetType)
 
-	if connectionMethod == "ssh" {
+	if connectionMethod == connectionMethodSSH {
 		fmt.Printf("SSH Key: %s\n", keyInfo.Name)
 		fmt.Println("\n🔗 To connect:")
 		if subnet.IsPublic {
@@ -423,10 +430,10 @@ func printDryRunConfiguration(env *config.Environment, actualRegion, profile, re
 	}
 	fmt.Printf("  - Connection Method: %s\n", connectionMethod)
 	fmt.Printf("  - Subnet Type: %s\n", subnetType)
-	if createNatGateway && subnetType == "private" {
+	if createNatGateway && subnetType == subnetTypePrivate {
 		fmt.Printf("  - NAT Gateway: will be created (additional cost)\n")
 	}
-	if connectionMethod == "ssh" {
+	if connectionMethod == connectionMethodSSH {
 		fmt.Printf("  - SSH Key Pair: %s (economical reuse)\n", keyName)
 	} else {
 		fmt.Printf("  - Session Manager: IAM role will be created/attached\n")
@@ -438,21 +445,21 @@ func printDryRunActions(env *config.Environment, connectionMethod, subnetType st
 	fmt.Printf("[DRY RUN] Would perform these actions:\n")
 	actionNum := 1
 
-	if connectionMethod == "ssh" {
+	if connectionMethod == connectionMethodSSH {
 		fmt.Printf("  %d. Create/verify SSH key pair (%s)\n", actionNum, keyName)
 	} else {
 		fmt.Printf("  %d. Create/verify IAM role for Session Manager\n", actionNum)
 	}
 	actionNum++
 
-	if connectionMethod == "ssh" {
+	if connectionMethod == connectionMethodSSH {
 		fmt.Printf("  %d. Create/verify security group (SSH + Jupyter access)\n", actionNum)
 	} else {
 		fmt.Printf("  %d. Create/verify security group (Jupyter access only)\n", actionNum)
 	}
 	actionNum++
 
-	if subnetType == "private" && createNatGateway {
+	if subnetType == subnetTypePrivate && createNatGateway {
 		fmt.Printf("  %d. Create/verify NAT Gateway for internet access\n", actionNum)
 		actionNum++
 	}
@@ -464,7 +471,7 @@ func printDryRunActions(env *config.Environment, connectionMethod, subnetType st
 	fmt.Printf("  %d. Wait for instance to be running\n", actionNum)
 	actionNum++
 
-	if connectionMethod == "ssh" {
+	if connectionMethod == connectionMethodSSH {
 		fmt.Printf("  %d. Setup SSH tunnel (port 8888)\n", actionNum)
 	} else {
 		fmt.Printf("  %d. Setup Session Manager port forwarding (port 8888)\n", actionNum)

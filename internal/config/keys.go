@@ -9,6 +9,13 @@ import (
 	"github.com/scttfrdmn/aws-jupyter/internal/aws"
 )
 
+const (
+	// File and directory permissions
+	permKeyDir     = 0700 // Owner only (rwx------)
+	permPrivateKey = 0600 // Owner read/write only (rw-------)
+	permPublicKey  = 0644 // Owner read/write, others read (rw-r--r--)
+)
+
 // KeyStorage manages local SSH key storage
 type KeyStorage struct {
 	baseDir string
@@ -34,8 +41,8 @@ func DefaultKeyStorage() (*KeyStorage, error) {
 
 // EnsureKeyDir creates the key storage directory with secure permissions
 func (ks *KeyStorage) EnsureKeyDir() error {
-	// Create directory with 700 permissions (owner only)
-	if err := os.MkdirAll(ks.baseDir, 0700); err != nil {
+	// Create directory with owner-only permissions
+	if err := os.MkdirAll(ks.baseDir, permKeyDir); err != nil {
 		return fmt.Errorf("failed to create key directory: %w", err)
 	}
 	return nil
@@ -70,8 +77,8 @@ func (ks *KeyStorage) SavePrivateKey(keyInfo *aws.KeyPairInfo) error {
 
 	keyPath := ks.GetKeyPath(keyInfo.Name)
 
-	// Write private key with 600 permissions (owner read/write only)
-	if err := os.WriteFile(keyPath, []byte(keyInfo.PrivateKey), 0600); err != nil {
+	// Write private key with owner read/write only permissions
+	if err := os.WriteFile(keyPath, []byte(keyInfo.PrivateKey), permPrivateKey); err != nil {
 		return fmt.Errorf("failed to save private key: %w", err)
 	}
 
@@ -91,8 +98,8 @@ func (ks *KeyStorage) SavePublicKey(keyName, publicKey string) error {
 
 	pubKeyPath := ks.GetPublicKeyPath(keyName)
 
-	// Write public key with 644 permissions (owner read/write, others read)
-	if err := os.WriteFile(pubKeyPath, []byte(publicKey), 0644); err != nil {
+	// Write public key with owner read/write, others read permissions
+	if err := os.WriteFile(pubKeyPath, []byte(publicKey), permPublicKey); err != nil {
 		return fmt.Errorf("failed to save public key: %w", err)
 	}
 
@@ -179,9 +186,9 @@ func (ks *KeyStorage) ValidateKeyPermissions(keyName string) error {
 	}
 
 	mode := info.Mode()
-	// Check that permissions are 600 (owner read/write only)
-	if mode.Perm() != 0600 {
-		return fmt.Errorf("private key has insecure permissions %o, should be 600", mode.Perm())
+	// Check that permissions are owner read/write only
+	if mode.Perm() != permPrivateKey {
+		return fmt.Errorf("private key has insecure permissions %o, should be %o", mode.Perm(), permPrivateKey)
 	}
 
 	return nil
@@ -191,7 +198,7 @@ func (ks *KeyStorage) ValidateKeyPermissions(keyName string) error {
 func (ks *KeyStorage) FixKeyPermissions(keyName string) error {
 	keyPath := ks.GetKeyPath(keyName)
 
-	if err := os.Chmod(keyPath, 0600); err != nil {
+	if err := os.Chmod(keyPath, permPrivateKey); err != nil {
 		return fmt.Errorf("failed to fix key permissions: %w", err)
 	}
 
