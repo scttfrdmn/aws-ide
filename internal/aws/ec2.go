@@ -32,6 +32,21 @@ func NewEC2Client(ctx context.Context, profile string) (*EC2Client, error) {
 	}, nil
 }
 
+// NewEC2ClientForRegion creates a new EC2 client using the default profile for a specific region
+func NewEC2ClientForRegion(ctx context.Context, region string) (*EC2Client, error) {
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(region),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EC2Client{
+		client: ec2.NewFromConfig(cfg),
+		region: cfg.Region,
+	}, nil
+}
+
 // GetRegion returns the current region for this client
 func (e *EC2Client) GetRegion() string {
 	return e.region

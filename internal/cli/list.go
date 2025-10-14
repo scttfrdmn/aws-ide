@@ -1,11 +1,13 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"text/tabwriter"
 	"time"
 
+	awslib "github.com/scttfrdmn/aws-jupyter/internal/aws"
 	"github.com/scttfrdmn/aws-jupyter/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +24,8 @@ func NewListCmd() *cobra.Command {
 }
 
 func runList() error {
+	ctx := context.Background()
+
 	state, err := config.LoadState()
 	if err != nil {
 		return fmt.Errorf("failed to load state: %w", err)
@@ -44,11 +48,14 @@ func runList() error {
 			tunnel = ":8888"
 		}
 
+		// Get actual instance state from AWS
+		state := getInstanceState(ctx, instance)
+
 		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 			instance.ID,
 			instance.Environment,
 			instance.InstanceType,
-			"running", // TODO: get actual state from AWS
+			state,
 			uptime,
 			tunnel,
 		); err != nil {
@@ -57,6 +64,23 @@ func runList() error {
 	}
 
 	return w.Flush()
+}
+
+// getInstanceState retrieves the current state of an instance from AWS
+func getInstanceState(ctx context.Context, instance *config.Instance) string {
+	// Create AWS client for the instance's region
+	ec2Client, err := awslib.NewEC2ClientForRegion(ctx, instance.Region)
+	if err != nil {
+		return "unknown"
+	}
+
+	// Get current instance info from AWS
+	awsInstance, err := ec2Client.GetInstanceInfo(ctx, instance.ID)
+	if err != nil {
+		return "unknown"
+	}
+
+	return string(awsInstance.State.Name)
 }
 
 func formatDuration(start time.Time) string {
