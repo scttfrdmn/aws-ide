@@ -93,6 +93,7 @@ release:
 
 homebrew_casks:
   - name: aws-jupyter
+    skip_upload: false
     repository:
       owner: scttfrdmn
       name: homebrew-tap
@@ -100,9 +101,6 @@ homebrew_casks:
     homepage: https://github.com/scttfrdmn/aws-jupyter
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
-    dependencies:
-      - cask: awscli
-        type: optional
 
 dockers:
   - image_templates:
