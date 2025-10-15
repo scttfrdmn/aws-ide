@@ -39,7 +39,12 @@ archives:
       - LICENSE
       - README.md
       - CHANGELOG.md
-      - environments/
+      - environments/computational-bio.yaml
+      - environments/data-science.yaml
+      - environments/deep-learning.yaml
+      - environments/minimal.yaml
+      - environments/ml-pytorch.yaml
+      - environments/r-stats.yaml
     formats:
       - tar.gz
     format_overrides:
