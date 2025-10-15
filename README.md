@@ -37,9 +37,22 @@ A powerful CLI tool for launching secure Jupyter Lab instances on AWS EC2 Gravit
 
 ## Installation
 
+### Homebrew (macOS and Linux)
+
+```bash
+brew tap scttfrdmn/tap
+brew install aws-jupyter
+```
+
+### Go Install
+
 ```bash
 go install github.com/scttfrdmn/aws-jupyter@latest
 ```
+
+### Pre-built Binaries
+
+Download the latest release for your platform from the [releases page](https://github.com/scttfrdmn/aws-jupyter/releases).
 
 ## AWS Authentication
 
