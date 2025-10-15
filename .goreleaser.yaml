@@ -8,7 +8,8 @@ before:
     - go generate ./...
 
 builds:
-  - main: ./cmd/aws-jupyter
+  - id: aws-jupyter
+    main: ./cmd/aws-jupyter
     binary: aws-jupyter
     env:
       - CGO_ENABLED=0
@@ -44,6 +45,23 @@ archives:
       - goos: windows
         formats:
           - zip
+  - id: homebrew
+    builds:
+      - aws-jupyter
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+    formats:
+      - tar.gz
+    meta: true
 
 checksum:
   name_template: 'checksums.txt'
@@ -94,15 +112,13 @@ release:
 
 homebrew_casks:
   - ids:
-      - default
+      - homebrew
     repository:
       owner: scttfrdmn
       name: homebrew-tap
     homepage: https://github.com/scttfrdmn/aws-jupyter
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
-    url_headers:
-      - "User-Agent: Homebrew"
 
 dockers:
   - image_templates:
