@@ -27,11 +27,11 @@ echo "Fetching checksums..."
 CHECKSUMS_URL="${BASE_URL}/checksums.txt"
 CHECKSUMS=$(curl -fsSL "$CHECKSUMS_URL")
 
-# Extract SHA256 for each platform
-DARWIN_AMD64_SHA=$(echo "$CHECKSUMS" | grep "darwin_amd64.tar.gz" | awk '{print $1}')
-DARWIN_ARM64_SHA=$(echo "$CHECKSUMS" | grep "darwin_arm64.tar.gz" | awk '{print $1}')
-LINUX_AMD64_SHA=$(echo "$CHECKSUMS" | grep "linux_amd64.tar.gz" | awk '{print $1}')
-LINUX_ARM64_SHA=$(echo "$CHECKSUMS" | grep "linux_arm64.tar.gz" | awk '{print $1}')
+# Extract SHA256 for each platform (try new format first, fall back to old format)
+DARWIN_AMD64_SHA=$(echo "$CHECKSUMS" | grep -E "(Darwin_x86_64|darwin_amd64).tar.gz" | awk '{print $1}')
+DARWIN_ARM64_SHA=$(echo "$CHECKSUMS" | grep -E "(Darwin_arm64|darwin_arm64).tar.gz" | awk '{print $1}')
+LINUX_AMD64_SHA=$(echo "$CHECKSUMS" | grep -E "(Linux_x86_64|linux_amd64).tar.gz" | awk '{print $1}')
+LINUX_ARM64_SHA=$(echo "$CHECKSUMS" | grep -E "(Linux_arm64|linux_arm64).tar.gz" | awk '{print $1}')
 
 if [ -z "$DARWIN_AMD64_SHA" ] || [ -z "$DARWIN_ARM64_SHA" ] || [ -z "$LINUX_AMD64_SHA" ] || [ -z "$LINUX_ARM64_SHA" ]; then
   echo "Error: Could not fetch all required checksums"
@@ -56,19 +56,21 @@ class AwsJupyter < Formula
 
   on_macos do
     on_intel do
-      url "${BASE_URL}/aws-jupyter_${VERSION}_darwin_amd64.tar.gz"
+      url "${BASE_URL}/aws-jupyter_Darwin_x86_64.tar.gz"
       sha256 "${DARWIN_AMD64_SHA}"
 
       def install
         bin.install "aws-jupyter"
+        pkgshare.install "environments"
       end
     end
     on_arm do
-      url "${BASE_URL}/aws-jupyter_${VERSION}_darwin_arm64.tar.gz"
+      url "${BASE_URL}/aws-jupyter_Darwin_arm64.tar.gz"
       sha256 "${DARWIN_ARM64_SHA}"
 
       def install
         bin.install "aws-jupyter"
+        pkgshare.install "environments"
       end
     end
   end
@@ -76,21 +78,23 @@ class AwsJupyter < Formula
   on_linux do
     on_intel do
       if Hardware::CPU.is_64_bit?
-        url "${BASE_URL}/aws-jupyter_${VERSION}_linux_amd64.tar.gz"
+        url "${BASE_URL}/aws-jupyter_Linux_x86_64.tar.gz"
         sha256 "${LINUX_AMD64_SHA}"
 
         def install
           bin.install "aws-jupyter"
+          pkgshare.install "environments"
         end
       end
     end
     on_arm do
       if Hardware::CPU.is_64_bit?
-        url "${BASE_URL}/aws-jupyter_${VERSION}_linux_arm64.tar.gz"
+        url "${BASE_URL}/aws-jupyter_Linux_arm64.tar.gz"
         sha256 "${LINUX_ARM64_SHA}"
 
         def install
           bin.install "aws-jupyter"
+          pkgshare.install "environments"
         end
       end
     end

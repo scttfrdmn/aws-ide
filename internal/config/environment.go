@@ -23,15 +23,21 @@ type Environment struct {
 
 // LoadEnvironment loads an environment configuration by name from built-in or user configs
 func LoadEnvironment(name string) (*Environment, error) {
-	// Try user config first, then built-in
+	// Try user config first, then built-in, then Homebrew pkgshare
 	userPath := filepath.Join(GetConfigDir(), "environments", name+".yaml")
 	builtinPath := filepath.Join("environments", name+".yaml")
+	homebrewPath := filepath.Join("/opt/homebrew/share/aws-jupyter/environments", name+".yaml")
+	linuxbrewPath := filepath.Join("/home/linuxbrew/.linuxbrew/share/aws-jupyter/environments", name+".yaml")
 
 	var path string
 	if _, err := os.Stat(userPath); err == nil {
 		path = userPath
 	} else if _, err := os.Stat(builtinPath); err == nil {
 		path = builtinPath
+	} else if _, err := os.Stat(homebrewPath); err == nil {
+		path = homebrewPath
+	} else if _, err := os.Stat(linuxbrewPath); err == nil {
+		path = linuxbrewPath
 	} else {
 		return nil, fmt.Errorf("environment %s not found", name)
 	}
@@ -52,32 +58,25 @@ func LoadEnvironment(name string) (*Environment, error) {
 // ListEnvironments returns a list of all available environment names from built-in and user configs
 func ListEnvironments() ([]string, error) {
 	var envs []string
+	seen := make(map[string]bool)
 
-	// Check built-in environments
-	if entries, err := os.ReadDir("environments"); err == nil {
-		for _, entry := range entries {
-			if filepath.Ext(entry.Name()) == ".yaml" {
-				envs = append(envs, entry.Name()[:len(entry.Name())-5])
-			}
-		}
+	// Check directories in order of precedence
+	dirs := []string{
+		filepath.Join(GetConfigDir(), "environments"),
+		"environments",
+		"/opt/homebrew/share/aws-jupyter/environments",
+		"/home/linuxbrew/.linuxbrew/share/aws-jupyter/environments",
 	}
 
-	// Check user environments
-	userEnvDir := filepath.Join(GetConfigDir(), "environments")
-	if entries, err := os.ReadDir(userEnvDir); err == nil {
-		for _, entry := range entries {
-			if filepath.Ext(entry.Name()) == ".yaml" {
-				name := entry.Name()[:len(entry.Name())-5]
-				// Avoid duplicates
-				found := false
-				for _, existing := range envs {
-					if existing == name {
-						found = true
-						break
+	for _, dir := range dirs {
+		if entries, err := os.ReadDir(dir); err == nil {
+			for _, entry := range entries {
+				if filepath.Ext(entry.Name()) == ".yaml" {
+					name := entry.Name()[:len(entry.Name())-5]
+					if !seen[name] {
+						envs = append(envs, name)
+						seen[name] = true
 					}
-				}
-				if !found {
-					envs = append(envs, name)
 				}
 			}
 		}
