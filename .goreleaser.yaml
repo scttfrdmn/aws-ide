@@ -45,24 +45,6 @@ archives:
       - goos: windows
         formats:
           - zip
-  - id: homebrew
-    builds:
-      - aws-jupyter
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    files:
-      - LICENSE
-      - README.md
-      - CHANGELOG.md
-    formats:
-      - tar.gz
-    meta: true
-
 checksum:
   name_template: 'checksums.txt'
 
@@ -111,9 +93,7 @@ release:
     Those were the changes on {{ .Tag }}!
 
 brews:
-  - ids:
-      - homebrew
-    repository:
+  - repository:
       owner: scttfrdmn
       name: homebrew-tap
     directory: Formula
