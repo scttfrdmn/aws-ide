@@ -92,19 +92,13 @@ release:
 
     Those were the changes on {{ .Tag }}!
 
-brews:
+homebrew_casks:
   - repository:
       owner: scttfrdmn
       name: homebrew-tap
-      token: "{{ .Env.GITHUB_TOKEN }}"
-    directory: Formula
     homepage: https://github.com/scttfrdmn/aws-jupyter
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
-    test: |
-      system "#{bin}/aws-jupyter --version"
-    install: |
-      bin.install "aws-jupyter"
 
 dockers:
   - image_templates:
