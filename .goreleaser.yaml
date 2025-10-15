@@ -96,6 +96,7 @@ brews:
   - repository:
       owner: scttfrdmn
       name: homebrew-tap
+      token: "{{ .Env.GITHUB_TOKEN }}"
     directory: Formula
     homepage: https://github.com/scttfrdmn/aws-jupyter
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
