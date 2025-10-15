@@ -151,25 +151,3 @@ func (a *AMISelector) findAmazonLinuxAMI(ctx context.Context, client *EC2Client,
 	fmt.Printf("Selected Amazon Linux %s %s AMI: %s (%s)\n", version, arch, amiID, aws.ToString(newestAMI.Name))
 	return amiID, nil
 }
-
-// GetDefaultAMI returns a hardcoded fallback AMI for the region (Ubuntu 22.04 ARM64)
-func (a *AMISelector) GetDefaultAMI() string {
-	// These are fallback AMIs - we should always try to find the latest first
-	fallbackAMIs := map[string]string{
-		"us-east-1":      "ami-0c2d3450e51c5bfb3",
-		"us-east-2":      "ami-0a8b4cd432b1c3063",
-		"us-west-1":      "ami-0cbd8f37d14e0b6e8",
-		"us-west-2":      "ami-0d70546e43a941d70",
-		"eu-west-1":      "ami-0d71ea30463e0ff8d",
-		"eu-central-1":   "ami-0dcc0ebde7b2e00db",
-		"ap-southeast-1": "ami-0dc2d3e4c0f9ebd18",
-		"ap-northeast-1": "ami-0f15f40e8caf0f662",
-	}
-
-	if ami, ok := fallbackAMIs[a.region]; ok {
-		return ami
-	}
-
-	// Return us-west-2 as ultimate fallback
-	return fallbackAMIs["us-west-2"]
-}

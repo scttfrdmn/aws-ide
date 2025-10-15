@@ -326,9 +326,7 @@ func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *co
 	amiSelector := aws.NewAMISelector(region)
 	amiID, err := amiSelector.GetAMI(ctx, ec2Client, env.AMIBase)
 	if err != nil {
-		fmt.Printf("Warning: Could not find latest AMI (%v), using fallback\n", err)
-		amiID = amiSelector.GetDefaultAMI()
-		fmt.Printf("Using fallback AMI: %s\n", amiID)
+		return "", "", fmt.Errorf("failed to find AMI: %w", err)
 	}
 
 	fmt.Println("📜 Generating user data script...")
