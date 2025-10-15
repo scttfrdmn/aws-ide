@@ -39,6 +39,7 @@ archives:
       - LICENSE
       - README.md
       - CHANGELOG.md
+      - environments/
     formats:
       - tar.gz
     format_overrides:
