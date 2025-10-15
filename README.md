@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/scttfrdmn/aws-jupyter)](https://github.com/scttfrdmn/aws-jupyter/releases)
 
-> **⚠️ UNDER ACTIVE DEVELOPMENT**: This project is currently in active development. Core functionality including AWS instance launching, SSH tunneling, and state management are being implemented. See the [project roadmap](#roadmap) and [contributing guide](CONTRIBUTING.md) to get involved.
-
 A powerful CLI tool for launching secure Jupyter Lab instances on AWS EC2 Graviton processors with professional-grade networking and security features.
+
+**Full lifecycle management** with 10 commands for launching, connecting, stopping, and terminating instances across public and private subnets with Session Manager or SSH access.
 
 ## 🚀 Key Features
 
@@ -85,22 +85,23 @@ aws-jupyter launch --connection ssh
 aws-jupyter launch --env ml-pytorch --instance-type m7g.large --connection ssh
 ```
 
-### **🛠️ Key Management & Environment Tools**
+### **🛠️ Instance & Resource Management**
 ```bash
-# Manage SSH keys
+# Instance lifecycle
+aws-jupyter list                        # Show all instances with status
+aws-jupyter status i-0abc123def         # Detailed instance information
+aws-jupyter connect i-0abc123def        # Connect to existing instance
+aws-jupyter stop i-0abc123def           # Stop instance (preserves EBS)
+aws-jupyter terminate i-0abc123def      # Terminate instance (cleanup)
+
+# SSH key management
 aws-jupyter key list                    # View local and AWS key pairs
 aws-jupyter key show                    # Show default key details
 aws-jupyter key validate                # Check key file permissions
 aws-jupyter key cleanup --dry-run       # Preview orphaned key cleanup
 
-# Generate custom environment from your setup
+# Environment generation
 aws-jupyter generate --name my-env --source ./my-project
-
-# List and manage instances
-aws-jupyter list                        # Show all instances
-aws-jupyter connect i-0abc123def        # Connect to existing instance
-aws-jupyter stop i-0abc123def           # Stop with hibernation support
-aws-jupyter terminate i-0abc123def      # Terminate instance
 ```
 
 ### **📋 Preview Changes (Dry Run)**
@@ -182,13 +183,19 @@ environment_vars:
 - **Audit logging** - all sessions logged in CloudTrail
 - **Works anywhere** - no bastion hosts or VPN required
 
+📋 **[Complete Session Manager Setup Guide →](docs/SESSION_MANAGER_SETUP.md)**
+
 ```bash
 # Launch with Session Manager
 aws-jupyter launch --connection session-manager
 
 # Connect to running instance
+aws-jupyter connect i-0abc123def
+# or use AWS CLI directly:
 aws ssm start-session --target i-0abc123def --profile myprofile
 ```
+
+**Prerequisites**: Requires AWS CLI and Session Manager plugin installed. See setup guide for details.
 
 ### **Traditional SSH**
 - **Full SSH access** - direct SSH connection with automatic key management
@@ -215,6 +222,8 @@ ssh -i ~/.aws-jupyter/keys/aws-jupyter-us-west-2.pem ec2-user@1.2.3.4
 - Enhanced security with no direct internet exposure
 - Requires NAT Gateway for internet access (additional cost ~$45/month)
 - Ideal for production and sensitive workloads
+
+📋 **[Private Subnet Best Practices Guide →](docs/PRIVATE_SUBNET_GUIDE.md)**
 
 ```bash
 # Private subnet with internet access (recommended for production)
@@ -307,46 +316,60 @@ Your AWS credentials need the following permissions:
 
 **💡 Tip**: Use AWS managed policies like `PowerUserAccess` for development, or create custom policies for production.
 
+## 📖 Documentation
+
+### **Guides**
+- **[Session Manager Setup](docs/SESSION_MANAGER_SETUP.md)** - Complete setup guide for AWS Session Manager
+- **[Private Subnet Guide](docs/PRIVATE_SUBNET_GUIDE.md)** - Best practices for private subnet deployments
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Examples & Use Cases](docs/EXAMPLES.md)** - Real-world usage scenarios
+
+### **Reference**
+- **[AWS Authentication](docs/AWS_AUTHENTICATION.md)** - Complete authentication setup guide
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+- **[Roadmap](ROADMAP.md)** - Detailed feature planning through v1.0.0
+
 ## 🗺️ Roadmap
 
-### ✅ **Phase 1: Foundation** (Complete)
-- [x] CLI framework with Cobra commands
-- [x] Environment configuration system (6 built-in environments)
-- [x] AWS client integration and authentication
-- [x] Environment generation from local setups
-- [x] Comprehensive test coverage (74%+)
+See the complete [ROADMAP.md](ROADMAP.md) for detailed feature planning through v1.0.0.
+
+### ✅ **v0.1.0 - Core Foundation** (Complete)
+- [x] CLI framework with 10 complete commands
+- [x] Environment system (6 built-in + custom generation)
+- [x] AWS integration and authentication
 - [x] Dry-run functionality for all operations
+- [x] Comprehensive documentation
 
-### ✅ **Phase 2: Security & Networking** (Complete)
-- [x] **SSH Key Management**: Economical reuse strategy with secure local storage
-- [x] **Session Manager Integration**: Secure access without SSH key complexity
-- [x] **Advanced Networking**: Public/private subnet support with NAT Gateway
-- [x] **Security Groups**: Smart firewall rules for SSH and Session Manager
-- [x] **IAM Role Management**: Automatic role creation for Session Manager
+### ✅ **v0.2.0 - Production Ready** (Current Release)
+- [x] **Full lifecycle management**: Launch, connect, stop, terminate commands
+- [x] **SSH key management**: Complete CLI for key operations
+- [x] **Session Manager**: Secure access without SSH keys
+- [x] **Advanced networking**: Public/private subnets with NAT Gateway support
+- [x] **Test coverage**: 18.7% overall (AWS: 3.8%, CLI: 27.8%, Config: 19.1%)
+- [x] **Code quality**: A+ Go Report Card, comprehensive linting
+- [x] **Documentation**: Complete guides for all features
 
-### ✅ **Phase 3: Instance Launching** (Complete)
-- [x] **EC2 Instance Launching**: Full support for both connection methods
-- [x] **Infrastructure Integration**: Security groups, subnets, IAM roles
-- [x] **Cost Awareness**: Clear warnings and dry-run previews
-- [x] **Key Management CLI**: Complete key validation and cleanup tools
+### 📋 **v0.3.0 - Integration Testing** (Planned Q1 2025)
+- [ ] Integration test infrastructure with localstack/moto
+- [ ] 40%+ overall test coverage
+- [ ] End-to-end testing for complete workflows
+- [ ] GitHub Actions integration test workflow
 
-### 🚧 **Phase 4: User Experience** (In Progress)
-- [ ] **User Data Generation**: Environment-specific instance setup scripts
-- [ ] **Port Forwarding**: SSH tunnels and Session Manager port forwarding
-- [ ] **Instance State Tracking**: Persistent local state management
-- [ ] **Connect Command**: Easy connection to existing instances
+### 🚀 **v0.4.0 - UX Enhancements** (Planned Q1 2025)
+- [ ] Interactive launch wizard
+- [ ] Color-coded output and progress bars
+- [ ] Enhanced error messages with suggestions
+- [ ] Configuration file support (~/.aws-jupyter/config.yaml)
 
-### 📋 **Phase 5: Advanced Features** (Planned)
-- [ ] **Stop/Start/Terminate**: Full instance lifecycle management
-- [ ] **Real-time Monitoring**: Instance status and resource usage
-- [ ] **Idle Detection**: Automatic shutdown based on activity
-- [ ] **Multi-Region Support**: Cross-region instance management
-- [ ] **Team Features**: Shared environments and access controls
+### 📈 **Future Versions**
+- **v0.5.0**: Cost tracking and optimization
+- **v0.6.0**: Multi-instance batch operations
+- **v0.7.0**: Backup and restore capabilities
+- **v0.8.0**: Enterprise features (multi-account, RBAC)
+- **v0.9.0**: Plugin system and IDE integrations
+- **v1.0.0**: Production-grade stability (60%+ coverage, security audit)
 
-### 🎯 **Current Focus**
-Working on completing the core user experience with port forwarding, state management, and connection commands. The infrastructure foundation is solid and ready for production use.
-
-**Want to contribute?** Check our [Contributing Guide](CONTRIBUTING.md) - we welcome help with any of these features!
+**Want to contribute?** Check our [Contributing Guide](CONTRIBUTING.md) and [ROADMAP.md](ROADMAP.md) for detailed feature plans!
 
 ## Development
 

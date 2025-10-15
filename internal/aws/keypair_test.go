@@ -27,9 +27,9 @@ func TestDefaultKeyPairStrategy(t *testing.T) {
 
 func TestKeyPairStrategy_GetDefaultKeyName(t *testing.T) {
 	tests := []struct {
-		name          string
-		strategy      KeyPairStrategy
-		expectedName  string
+		name         string
+		strategy     KeyPairStrategy
+		expectedName string
 	}{
 		{
 			name: "default strategy",

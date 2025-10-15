@@ -9,8 +9,8 @@ import (
 
 const (
 	// File and directory permissions for config
-	permConfigDir   = 0755 // Owner rwx, others rx (rwxr-xr-x)
-	permStateFile   = 0600 // Owner read/write only (rw-------)
+	permConfigDir = 0755 // Owner rwx, others rx (rwxr-xr-x)
+	permStateFile = 0600 // Owner read/write only (rw-------)
 )
 
 // Instance represents a tracked EC2 instance with its metadata

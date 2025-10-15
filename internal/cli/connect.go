@@ -113,7 +113,7 @@ func setupSSHTunnel(instanceID string, localPort int, publicIP string, instance 
 	remotePort := 8888
 	cmd := exec.Command("ssh",
 		"-i", keyPath,
-		"-N", // No remote command
+		"-N",                                                        // No remote command
 		"-L", fmt.Sprintf("%d:localhost:%d", localPort, remotePort), // Local port forwarding
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
