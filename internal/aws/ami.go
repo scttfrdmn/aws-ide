@@ -43,8 +43,19 @@ func (a *AMISelector) GetAMI(ctx context.Context, client *EC2Client, amiBase str
 
 // findUbuntuAMI finds the latest Ubuntu AMI for the given version and architecture
 func (a *AMISelector) findUbuntuAMI(ctx context.Context, client *EC2Client, version, arch string) (string, error) {
-	// Ubuntu AMI name pattern
-	namePattern := fmt.Sprintf("ubuntu/images/hvm-ssd/ubuntu-*-%s-server-*", version)
+	// Ubuntu AMI name pattern using codenames
+	codenames := map[string]string{
+		"22.04": "jammy",
+		"20.04": "focal",
+		"18.04": "bionic",
+	}
+
+	codename, ok := codenames[version]
+	if !ok {
+		return "", fmt.Errorf("unsupported Ubuntu version: %s", version)
+	}
+
+	namePattern := fmt.Sprintf("ubuntu/images/hvm-ssd/ubuntu-%s-%s-%s-server-*", codename, version, arch)
 
 	var archType types.ArchitectureValues
 	if arch == "arm64" {
