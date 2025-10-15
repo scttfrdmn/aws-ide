@@ -34,7 +34,7 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-aws-jupyter
+/aws-jupyter
 *.yaml.bak
 .aws-jupyter/
 dist/
