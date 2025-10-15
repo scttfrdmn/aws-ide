@@ -90,10 +90,6 @@ release:
     Welcome to this new release!
 
   footer: |
-    ## Docker Images
-
-    Docker images are available at `ghcr.io/scttfrdmn/aws-jupyter:{{ .Tag }}`
-
     ## Thanks!
 
     Those were the changes on {{ .Tag }}!
@@ -105,19 +101,3 @@ homebrew_casks:
     homepage: https://github.com/scttfrdmn/aws-jupyter
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
-
-dockers:
-  - image_templates:
-      - "ghcr.io/scttfrdmn/aws-jupyter:{{ .Tag }}"
-      - "ghcr.io/scttfrdmn/aws-jupyter:v{{ .Major }}"
-      - "ghcr.io/scttfrdmn/aws-jupyter:v{{ .Major }}.{{ .Minor }}"
-      - "ghcr.io/scttfrdmn/aws-jupyter:latest"
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-    extra_files:
-      - environments/
