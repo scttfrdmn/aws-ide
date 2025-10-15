@@ -26,7 +26,8 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - name_template: >-
+  - id: default
+    name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
@@ -92,12 +93,16 @@ release:
     Those were the changes on {{ .Tag }}!
 
 homebrew_casks:
-  - repository:
+  - ids:
+      - default
+    repository:
       owner: scttfrdmn
       name: homebrew-tap
     homepage: https://github.com/scttfrdmn/aws-jupyter
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
+    url_headers:
+      - "User-Agent: Homebrew"
 
 dockers:
   - image_templates:
