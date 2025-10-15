@@ -26,23 +26,29 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - format: tar.gz
-    name_template: >-
+  - name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
 checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
@@ -85,23 +91,18 @@ release:
 
     Those were the changes on {{ .Tag }}!
 
-brews:
+homebrew_casks:
   - name: aws-jupyter
     repository:
       owner: scttfrdmn
       name: homebrew-tap
       token: "{{ .Env.GITHUB_TOKEN }}"
-    directory: Formula
     homepage: https://github.com/scttfrdmn/aws-jupyter
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
-    test: |
-      system "#{bin}/aws-jupyter --version"
     dependencies:
-      - name: awscli
+      - cask: awscli
         type: optional
-    install: |
-      bin.install "aws-jupyter"
 
 dockers:
   - image_templates:
