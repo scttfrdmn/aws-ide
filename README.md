@@ -35,6 +35,12 @@ A powerful CLI tool for launching secure Jupyter Lab instances on AWS EC2 Gravit
 - **Comprehensive CLI**: Full lifecycle management with intuitive commands
 - **State Tracking**: Persistent local state for managing multiple instances
 
+### **💰 Cost Optimization**
+- **Automatic Idle Detection**: Multi-signal monitoring (Jupyter kernels, CPU, processes)
+- **Auto-Stop**: Configurable idle timeout to prevent runaway costs
+- **Flexible Timeouts**: Set custom idle timeouts (e.g., `--idle-timeout 30m`, `2h`, `8h`)
+- **Smart Monitoring**: Detects active Jupyter sessions, CPU usage, and running computations
+
 ## Installation
 
 ### Homebrew (macOS and Linux)
@@ -56,26 +62,122 @@ Download the latest release for your platform from the [releases page](https://g
 
 ## AWS Authentication
 
-Before using aws-jupyter, you need to configure AWS credentials. The tool supports all standard AWS authentication methods:
+Before using aws-jupyter, you need to configure AWS credentials. Don't have an AWS account yet? [Sign up here](https://aws.amazon.com/free/) - new accounts get 12 months of free tier access!
+
+### **🚀 Quick Setup (5 Minutes)**
+
+#### **Option 1: AWS CLI Configuration (Recommended)**
+
+1. **Install AWS CLI** (if not already installed):
+   ```bash
+   # macOS
+   brew install awscli
+
+   # Linux
+   curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+   unzip awscliv2.zip && sudo ./aws/install
+
+   # Windows
+   # Download from: https://awscli.amazonaws.com/AWSCLIV2.msi
+   ```
+
+2. **Get your AWS credentials**:
+   - Log into [AWS Console](https://console.aws.amazon.com/)
+   - Navigate to IAM → Users → Your User → Security Credentials
+   - Click "Create access key" → Choose "CLI" → Create
+   - **Save both Access Key ID and Secret Access Key** (you won't see the secret again!)
+
+3. **Configure AWS CLI**:
+   ```bash
+   aws configure
+   # Enter:
+   # - AWS Access Key ID: [your-access-key]
+   # - AWS Secret Access Key: [your-secret-key]
+   # - Default region: us-east-1 (or your preferred region)
+   # - Default output format: json
+   ```
+
+4. **Verify it works**:
+   ```bash
+   aws sts get-caller-identity
+   # Should show your AWS account ID and user ARN
+   ```
+
+5. **Launch your first instance!**
+   ```bash
+   aws-jupyter launch
+   ```
+
+#### **Option 2: Multiple AWS Profiles**
+
+Perfect if you have multiple AWS accounts (work, personal, etc.):
+
+```bash
+# Configure a named profile
+aws configure --profile personal
+aws configure --profile work
+
+# Use specific profile with aws-jupyter
+aws-jupyter launch --profile personal
+aws-jupyter launch --profile work --region eu-west-1
+```
+
+#### **Option 3: Environment Variables**
+
+Quick setup for CI/CD or temporary access:
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_DEFAULT_REGION="us-east-1"
+
+aws-jupyter launch  # Uses environment variables automatically
+```
+
+#### **Option 4: AWS SSO (Enterprise)**
+
+If your organization uses AWS SSO:
+
+```bash
+# Configure SSO profile
+aws configure sso --profile company
+
+# Login and use
+aws sso login --profile company
+aws-jupyter launch --profile company
+```
+
+### **📋 Detailed Authentication Guide**
+
+For advanced scenarios, troubleshooting, and security best practices:
 
 📋 **[Complete AWS Authentication Guide →](docs/AWS_AUTHENTICATION.md)**
 
-**Quick Setup Options:**
+### **🔒 Security Best Practices**
 
-- **AWS Profiles** (Recommended): `aws configure --profile myprofile`
-- **Environment Variables**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
-- **AWS SSO**: `aws sso login --profile mysso`
-- **IAM Roles**: Automatic when running on EC2/ECS/Lambda
-
-```bash
-# Verify your AWS access
-aws sts get-caller-identity --profile myprofile
-
-# Use with aws-jupyter
-aws-jupyter launch --profile myprofile --region us-west-2
-```
+- ✅ **Use IAM users** with least-privilege policies (don't use root account)
+- ✅ **Enable MFA** on your AWS account for additional security
+- ✅ **Rotate access keys** regularly (every 90 days)
+- ✅ **Use AWS profiles** to separate different accounts/environments
+- ✅ **Never commit** AWS credentials to version control
+- ⚠️ **Delete unused** access keys from AWS Console
 
 ## Quick Start
+
+> **First Time User?** Make sure you've configured AWS credentials first! See the [AWS Authentication](#aws-authentication) section below.
+
+### **⚡ Simplest Launch (5 Seconds)**
+```bash
+# Launch with all defaults - perfect for getting started
+aws-jupyter launch
+
+# That's it! The CLI will:
+# ✓ Configure IAM roles and security groups
+# ✓ Launch an m7g.medium Graviton instance
+# ✓ Install Jupyter Lab with data science packages
+# ✓ Auto-stop after 4 hours of inactivity (saves money!)
+# ✓ Show you the Jupyter URL when ready
+```
 
 ### **🔐 Secure Launch (Session Manager - Recommended)**
 ```bash
@@ -96,6 +198,21 @@ aws-jupyter launch --connection ssh
 
 # SSH with custom environment and instance type
 aws-jupyter launch --env ml-pytorch --instance-type m7g.large --connection ssh
+```
+
+### **💰 Cost Control with Idle Detection**
+```bash
+# Auto-stop after 30 minutes of inactivity (great for testing)
+aws-jupyter launch --idle-timeout 30m
+
+# Custom timeout for long-running work
+aws-jupyter launch --idle-timeout 8h
+
+# Auto-stop detects:
+# ✓ Active Jupyter kernels and notebook sessions
+# ✓ High CPU usage (>10% threshold)
+# ✓ Running computation processes
+# ✓ Instance automatically stops when idle to save costs
 ```
 
 ### **🛠️ Instance & Resource Management**
@@ -353,7 +470,7 @@ See the complete [ROADMAP.md](ROADMAP.md) for detailed feature planning through 
 - [x] Dry-run functionality for all operations
 - [x] Comprehensive documentation
 
-### ✅ **v0.2.0 - Production Ready** (Current Release)
+### ✅ **v0.2.0 - Production Ready**
 - [x] **Full lifecycle management**: Launch, connect, stop, terminate commands
 - [x] **SSH key management**: Complete CLI for key operations
 - [x] **Session Manager**: Secure access without SSH keys
@@ -362,25 +479,35 @@ See the complete [ROADMAP.md](ROADMAP.md) for detailed feature planning through 
 - [x] **Code quality**: A+ Go Report Card, comprehensive linting
 - [x] **Documentation**: Complete guides for all features
 
-### 📋 **v0.3.0 - Integration Testing** (Planned Q1 2025)
-- [ ] Integration test infrastructure with localstack/moto
-- [ ] 40%+ overall test coverage
-- [ ] End-to-end testing for complete workflows
-- [ ] GitHub Actions integration test workflow
+### ✅ **v0.3.0 - Advanced Features**
+- [x] **Availability zone selection**: Automatic compatible AZ finding
+- [x] **Instance lifecycle**: Stop, start, terminate with state management
+- [x] **AMI management**: List and manage custom AMIs
 
-### 🚀 **v0.4.0 - UX Enhancements** (Planned Q1 2025)
+### ✅ **v0.4.0 - Cost Optimization** (Current Release)
+- [x] **Automatic idle detection**: Multi-signal monitoring system
+- [x] **Auto-stop functionality**: Configurable idle timeouts
+- [x] **Smart monitoring**: Detects Jupyter sessions, CPU usage, processes
+- [x] **Flexible timeouts**: Support for custom durations (30m, 2h, 8h, etc.)
+- [x] **Comprehensive documentation**: Enhanced Quick Start and AWS setup guides
+
+### 🚀 **v0.5.0 - UX Enhancements** (Planned Q1 2025)
 - [ ] Interactive launch wizard
 - [ ] Color-coded output and progress bars
 - [ ] Enhanced error messages with suggestions
 - [ ] Configuration file support (~/.aws-jupyter/config.yaml)
 
+### 📋 **v0.6.0 - Integration Testing** (Planned Q1 2025)
+- [ ] Integration test infrastructure with localstack/moto
+- [ ] 40%+ overall test coverage
+- [ ] End-to-end testing for complete workflows
+- [ ] GitHub Actions integration test workflow
+
 ### 📈 **Future Versions**
-- **v0.5.0**: Cost tracking and optimization
-- **v0.6.0**: Multi-instance batch operations
-- **v0.7.0**: Backup and restore capabilities
-- **v0.8.0**: Enterprise features (multi-account, RBAC)
-- **v0.9.0**: Plugin system and IDE integrations
-- **v1.0.0**: Production-grade stability (60%+ coverage, security audit)
+- **v0.7.0**: Multi-instance batch operations
+- **v0.8.0**: Backup and restore capabilities
+- **v0.9.0**: Enterprise features (multi-account, RBAC)
+- **v1.0.0**: Production-grade stability (60%+ coverage, security audit, plugin system)
 
 **Want to contribute?** Check our [Contributing Guide](CONTRIBUTING.md) and [ROADMAP.md](ROADMAP.md) for detailed feature plans!
 
