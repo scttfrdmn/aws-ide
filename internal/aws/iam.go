@@ -78,6 +78,10 @@ func (i *IAMClient) GetOrCreateSessionManagerRole(ctx context.Context) (*Instanc
 		}
 	} else {
 		fmt.Printf("Using existing IAM role: %s\n", roleName)
+		// Ensure auto-stop policy is attached to existing role (for backwards compatibility)
+		if err := i.ensureAutoStopPolicy(ctx, roleName); err != nil {
+			fmt.Printf("Warning: Failed to ensure auto-stop policy: %v\n", err)
+		}
 	}
 
 	// Check if instance profile exists
@@ -158,6 +162,68 @@ func (i *IAMClient) attachSessionManagerPolicy(ctx context.Context, roleName str
 		fmt.Printf("Warning: Failed to attach CloudWatch policy (non-critical): %v\n", err)
 	}
 
+	// Add inline policy for auto-stop (allows instance to stop itself)
+	if err := i.attachAutoStopPolicy(ctx, roleName); err != nil {
+		fmt.Printf("Warning: Failed to attach auto-stop policy (non-critical): %v\n", err)
+	}
+
+	return nil
+}
+
+// attachAutoStopPolicy attaches an inline policy allowing the instance to stop itself
+func (i *IAMClient) attachAutoStopPolicy(ctx context.Context, roleName string) error {
+	policyDoc := `{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "ec2:DescribeInstances",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ec2:StopInstances",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "ec2:ResourceTag/CreatedBy": "aws-jupyter-cli"
+                }
+            }
+        }
+    ]
+}`
+
+	_, err := i.client.PutRolePolicy(ctx, &iam.PutRolePolicyInput{
+		RoleName:       aws.String(roleName),
+		PolicyName:     aws.String("aws-jupyter-auto-stop-policy"),
+		PolicyDocument: aws.String(policyDoc),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to attach auto-stop policy: %w", err)
+	}
+
+	fmt.Println("✓ Auto-stop policy attached")
+	return nil
+}
+
+// ensureAutoStopPolicy checks if auto-stop policy exists and attaches it if missing
+func (i *IAMClient) ensureAutoStopPolicy(ctx context.Context, roleName string) error {
+	// Check if the inline policy already exists
+	_, err := i.client.GetRolePolicy(ctx, &iam.GetRolePolicyInput{
+		RoleName:   aws.String(roleName),
+		PolicyName: aws.String("aws-jupyter-auto-stop-policy"),
+	})
+
+	if err != nil {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) && apiErr.ErrorCode() == "NoSuchEntity" {
+			// Policy doesn't exist, attach it
+			return i.attachAutoStopPolicy(ctx, roleName)
+		}
+		return err
+	}
+
+	// Policy already exists
 	return nil
 }
 

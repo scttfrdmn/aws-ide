@@ -1,0 +1,14 @@
+[Unit]
+Description=Jupyter Auto-Stop Service
+After=network.target jupyter-idle-monitor.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/jupyter-auto-stop.sh
+Environment="IDLE_TIMEOUT=14400"
+Environment="IDLE_ACTION=stop"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
