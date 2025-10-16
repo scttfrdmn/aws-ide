@@ -20,22 +20,23 @@ const (
 // NewLaunchCmd creates the launch command for starting new Jupyter instances
 func NewLaunchCmd() *cobra.Command {
 	var (
-		environment      string
-		instanceType     string
-		idleTimeout      string
-		profile          string
-		region           string
-		dryRun           bool
-		connectionMethod string
-		subnetType       string
-		createNatGateway bool
+		environment       string
+		instanceType      string
+		idleTimeout       string
+		profile           string
+		region            string
+		availabilityZone  string
+		dryRun            bool
+		connectionMethod  string
+		subnetType        string
+		createNatGateway  bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "launch",
 		Short: "Launch a new Jupyter instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runLaunch(environment, instanceType, idleTimeout, profile, region, dryRun, connectionMethod, subnetType, createNatGateway)
+			return runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone, dryRun, connectionMethod, subnetType, createNatGateway)
 		},
 	}
 
@@ -44,6 +45,7 @@ func NewLaunchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&idleTimeout, "idle-timeout", "i", "4h", "Auto-shutdown timeout")
 	cmd.Flags().StringVarP(&profile, "profile", "p", "default", "AWS profile to use")
 	cmd.Flags().StringVarP(&region, "region", "r", "", "AWS region")
+	cmd.Flags().StringVarP(&availabilityZone, "availability-zone", "z", "", "Availability zone (e.g., us-east-1a)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
 	cmd.Flags().StringVarP(&connectionMethod, "connection", "c", "ssh", "Connection method: ssh or session-manager")
 	cmd.Flags().StringVarP(&subnetType, "subnet-type", "s", "public", "Subnet type: public or private")
@@ -52,7 +54,7 @@ func NewLaunchCmd() *cobra.Command {
 	return cmd
 }
 
-func runLaunch(environment, instanceType, idleTimeout, profile, region string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool) error {
+func runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool) error {
 	ctx := context.Background()
 
 	// Load and validate environment configuration
@@ -70,10 +72,10 @@ func runLaunch(environment, instanceType, idleTimeout, profile, region string, d
 	displayLaunchWarnings(connectionMethod, subnetType, createNatGateway)
 
 	if dryRun {
-		return executeDryRun(ctx, env, profile, region, idleTimeout, connectionMethod, subnetType, createNatGateway)
+		return executeDryRun(ctx, env, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType, createNatGateway)
 	}
 
-	return executeLaunch(ctx, env, profile, region, connectionMethod, subnetType, createNatGateway)
+	return executeLaunch(ctx, env, profile, region, availabilityZone, connectionMethod, subnetType, createNatGateway)
 }
 
 // loadAndValidateEnvironment loads the environment configuration and applies overrides
@@ -122,7 +124,7 @@ func displayLaunchWarnings(connectionMethod, subnetType string, createNatGateway
 }
 
 // executeDryRun performs a dry run and displays what would be done
-func executeDryRun(ctx context.Context, env *config.Environment, profile, region, idleTimeout, connectionMethod, subnetType string, createNatGateway bool) error {
+func executeDryRun(ctx context.Context, env *config.Environment, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType string, createNatGateway bool) error {
 	ec2Client, err := aws.NewEC2Client(ctx, profile)
 	if err != nil {
 		return fmt.Errorf("failed to create AWS client for dry run: %w", err)
@@ -139,7 +141,7 @@ func executeDryRun(ctx context.Context, env *config.Environment, profile, region
 }
 
 // executeLaunch performs the actual instance launch
-func executeLaunch(ctx context.Context, env *config.Environment, profile, region, connectionMethod, subnetType string, createNatGateway bool) error {
+func executeLaunch(ctx context.Context, env *config.Environment, profile, region, availabilityZone, connectionMethod, subnetType string, createNatGateway bool) error {
 	fmt.Printf("Launching %s environment on %s...\n", env.Name, env.InstanceType)
 
 	// Setup AWS client and determine region
@@ -155,7 +157,7 @@ func executeLaunch(ctx context.Context, env *config.Environment, profile, region
 	}
 
 	// Setup networking (subnet and NAT gateway)
-	subnet, err := setupNetworking(ctx, ec2Client, subnetType, createNatGateway)
+	subnet, err := setupNetworking(ctx, ec2Client, env.InstanceType, subnetType, availabilityZone, createNatGateway)
 	if err != nil {
 		return err
 	}
@@ -267,10 +269,22 @@ func setupSessionManagerAuthentication(ctx context.Context, profile string) (*aw
 }
 
 // setupNetworking configures subnet and NAT gateway
-func setupNetworking(ctx context.Context, ec2Client *aws.EC2Client, subnetType string, createNatGateway bool) (*aws.SubnetInfo, error) {
+func setupNetworking(ctx context.Context, ec2Client *aws.EC2Client, instanceType, subnetType, availabilityZone string, createNatGateway bool) (*aws.SubnetInfo, error) {
 	fmt.Printf("🌐 Selecting %s subnet...\n", subnetType)
 
-	subnet, err := ec2Client.GetSubnet(ctx, subnetType, "")
+	// If availability zone specified, validate instance type support
+	if availabilityZone != "" {
+		fmt.Printf("Validating instance type %s in availability zone %s...\n", instanceType, availabilityZone)
+		supported, err := ec2Client.IsInstanceTypeSupported(ctx, instanceType, availabilityZone)
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate instance type: %w", err)
+		}
+		if !supported {
+			return nil, fmt.Errorf("instance type %s is not supported in availability zone %s", instanceType, availabilityZone)
+		}
+	}
+
+	subnet, err := ec2Client.GetSubnet(ctx, subnetType, availabilityZone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subnet: %w", err)
 	}

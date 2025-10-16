@@ -52,6 +52,28 @@ func (e *EC2Client) GetRegion() string {
 	return e.region
 }
 
+// IsInstanceTypeSupported checks if an instance type is available in a specific availability zone
+func (e *EC2Client) IsInstanceTypeSupported(ctx context.Context, instanceType, availabilityZone string) (bool, error) {
+	result, err := e.client.DescribeInstanceTypeOfferings(ctx, &ec2.DescribeInstanceTypeOfferingsInput{
+		LocationType: types.LocationTypeAvailabilityZone,
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("instance-type"),
+				Values: []string{instanceType},
+			},
+			{
+				Name:   aws.String("location"),
+				Values: []string{availabilityZone},
+			},
+		},
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return len(result.InstanceTypeOfferings) > 0, nil
+}
+
 // LaunchInstance launches a new EC2 instance with the specified parameters
 func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*types.Instance, error) {
 	// Use provided subnet or get default

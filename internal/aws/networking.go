@@ -29,30 +29,41 @@ type NATGatewayInfo struct {
 	State    string
 }
 
-// GetSubnet finds an appropriate subnet based on the subnet type preference
-func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, vpcID string) (*SubnetInfo, error) {
-	if vpcID == "" {
-		defaultVpcID, err := e.getDefaultVpcID(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get default VPC: %w", err)
-		}
-		vpcID = defaultVpcID
+// GetSubnet finds an appropriate subnet based on the subnet type preference and optional availability zone
+func (e *EC2Client) GetSubnet(ctx context.Context, subnetType string, availabilityZone string) (*SubnetInfo, error) {
+	vpcID, err := e.getDefaultVpcID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default VPC: %w", err)
+	}
+
+	// Build filters for subnet query
+	filters := []types.Filter{
+		{
+			Name:   aws.String("vpc-id"),
+			Values: []string{vpcID},
+		},
+	}
+
+	// Add availability zone filter if specified
+	if availabilityZone != "" {
+		filters = append(filters, types.Filter{
+			Name:   aws.String("availability-zone"),
+			Values: []string{availabilityZone},
+		})
 	}
 
 	// Describe subnets in the VPC
 	result, err := e.client.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
-		Filters: []types.Filter{
-			{
-				Name:   aws.String("vpc-id"),
-				Values: []string{vpcID},
-			},
-		},
+		Filters: filters,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to describe subnets: %w", err)
 	}
 
 	if len(result.Subnets) == 0 {
+		if availabilityZone != "" {
+			return nil, fmt.Errorf("no subnets found in VPC %s in availability zone %s", vpcID, availabilityZone)
+		}
 		return nil, fmt.Errorf("no subnets found in VPC %s", vpcID)
 	}
 
@@ -102,7 +113,7 @@ func (e *EC2Client) GetOrCreateNATGateway(ctx context.Context, vpcID string) (*N
 	}
 
 	// Find a public subnet for the NAT Gateway
-	publicSubnet, err := e.GetSubnet(ctx, "public", vpcID)
+	publicSubnet, err := e.GetSubnet(ctx, "public", "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find public subnet for NAT Gateway: %w", err)
 	}
