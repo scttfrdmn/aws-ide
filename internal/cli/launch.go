@@ -272,8 +272,17 @@ func setupSessionManagerAuthentication(ctx context.Context, profile string) (*aw
 func setupNetworking(ctx context.Context, ec2Client *aws.EC2Client, instanceType, subnetType, availabilityZone string, createNatGateway bool) (*aws.SubnetInfo, error) {
 	fmt.Printf("🌐 Selecting %s subnet...\n", subnetType)
 
-	// If availability zone specified, validate instance type support
-	if availabilityZone != "" {
+	// If no availability zone specified, find one that supports the instance type
+	if availabilityZone == "" {
+		fmt.Printf("Finding availability zone that supports %s...\n", instanceType)
+		compatibleAZ, err := ec2Client.FindCompatibleAvailabilityZone(ctx, instanceType, subnetType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find compatible availability zone: %w", err)
+		}
+		availabilityZone = compatibleAZ
+		fmt.Printf("Selected availability zone: %s\n", availabilityZone)
+	} else {
+		// If availability zone specified, validate instance type support
 		fmt.Printf("Validating instance type %s in availability zone %s...\n", instanceType, availabilityZone)
 		supported, err := ec2Client.IsInstanceTypeSupported(ctx, instanceType, availabilityZone)
 		if err != nil {

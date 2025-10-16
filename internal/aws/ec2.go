@@ -74,6 +74,65 @@ func (e *EC2Client) IsInstanceTypeSupported(ctx context.Context, instanceType, a
 	return len(result.InstanceTypeOfferings) > 0, nil
 }
 
+// FindCompatibleAvailabilityZone finds an availability zone that supports the instance type and has the requested subnet type
+func (e *EC2Client) FindCompatibleAvailabilityZone(ctx context.Context, instanceType, subnetType string) (string, error) {
+	// Get all availability zones that support this instance type
+	result, err := e.client.DescribeInstanceTypeOfferings(ctx, &ec2.DescribeInstanceTypeOfferingsInput{
+		LocationType: types.LocationTypeAvailabilityZone,
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("instance-type"),
+				Values: []string{instanceType},
+			},
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to query instance type offerings: %w", err)
+	}
+
+	if len(result.InstanceTypeOfferings) == 0 {
+		return "", fmt.Errorf("instance type %s not available in region %s", instanceType, e.region)
+	}
+
+	// Get default VPC to check for subnets
+	vpcID, err := e.getDefaultVpcID(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get default VPC: %w", err)
+	}
+
+	// Try each AZ to find one with a suitable subnet
+	for _, offering := range result.InstanceTypeOfferings {
+		az := aws.ToString(offering.Location)
+
+		// Check if there's a subnet of the requested type in this AZ
+		subnets, err := e.client.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+			Filters: []types.Filter{
+				{
+					Name:   aws.String("vpc-id"),
+					Values: []string{vpcID},
+				},
+				{
+					Name:   aws.String("availability-zone"),
+					Values: []string{az},
+				},
+			},
+		})
+		if err != nil {
+			continue // Try next AZ
+		}
+
+		// Check if we have a subnet of the correct type
+		for _, subnet := range subnets.Subnets {
+			isPublic := aws.ToBool(subnet.MapPublicIpOnLaunch)
+			if (subnetType == "public" && isPublic) || (subnetType == "private" && !isPublic) {
+				return az, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no availability zone found with both %s support and %s subnet", instanceType, subnetType)
+}
+
 // LaunchInstance launches a new EC2 instance with the specified parameters
 func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*types.Instance, error) {
 	// Use provided subnet or get default
