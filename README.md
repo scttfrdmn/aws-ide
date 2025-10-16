@@ -50,6 +50,16 @@ brew tap scttfrdmn/tap
 brew install aws-jupyter
 ```
 
+### Scoop (Windows)
+
+```powershell
+# Once approved in Scoop main bucket
+scoop install aws-jupyter
+
+# Or install directly from this repository
+scoop install https://raw.githubusercontent.com/scttfrdmn/aws-jupyter/main/scoop/aws-jupyter.json
+```
+
 ### Go Install
 
 ```bash
