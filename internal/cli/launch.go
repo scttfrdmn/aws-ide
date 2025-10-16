@@ -3,6 +3,8 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/scttfrdmn/aws-jupyter/internal/aws"
@@ -56,6 +58,34 @@ func NewLaunchCmd() *cobra.Command {
 	return cmd
 }
 
+// parseDuration converts duration strings like "3m", "1h", "4h" to seconds
+func parseDuration(s string) (int, error) {
+	s = strings.TrimSpace(s)
+	if len(s) < 2 {
+		return 0, fmt.Errorf("invalid duration format: %s", s)
+	}
+
+	unit := s[len(s)-1:]
+	valueStr := s[:len(s)-1]
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid duration value: %s", s)
+	}
+
+	switch unit {
+	case "s":
+		return value, nil
+	case "m":
+		return value * 60, nil
+	case "h":
+		return value * 3600, nil
+	case "d":
+		return value * 86400, nil
+	default:
+		return 0, fmt.Errorf("invalid duration unit: %s (use s, m, h, or d)", unit)
+	}
+}
+
 func runLaunch(environment, instanceType, customAMI, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool) error {
 	ctx := context.Background()
 
@@ -63,6 +93,12 @@ func runLaunch(environment, instanceType, customAMI, idleTimeout, profile, regio
 	env, err := loadAndValidateEnvironment(environment, instanceType)
 	if err != nil {
 		return err
+	}
+
+	// Parse idle timeout
+	idleTimeoutSeconds, err := parseDuration(idleTimeout)
+	if err != nil {
+		return fmt.Errorf("failed to parse idle timeout: %w", err)
 	}
 
 	// Validate launch options
@@ -77,7 +113,7 @@ func runLaunch(environment, instanceType, customAMI, idleTimeout, profile, regio
 		return executeDryRun(ctx, env, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType, createNatGateway)
 	}
 
-	return executeLaunch(ctx, env, customAMI, profile, region, availabilityZone, connectionMethod, subnetType, createNatGateway)
+	return executeLaunch(ctx, env, customAMI, profile, region, availabilityZone, idleTimeoutSeconds, connectionMethod, subnetType, createNatGateway)
 }
 
 // loadAndValidateEnvironment loads the environment configuration and applies overrides
@@ -143,7 +179,7 @@ func executeDryRun(ctx context.Context, env *config.Environment, profile, region
 }
 
 // executeLaunch performs the actual instance launch
-func executeLaunch(ctx context.Context, env *config.Environment, customAMI, profile, region, availabilityZone, connectionMethod, subnetType string, createNatGateway bool) error {
+func executeLaunch(ctx context.Context, env *config.Environment, customAMI, profile, region, availabilityZone string, idleTimeoutSeconds int, connectionMethod, subnetType string, createNatGateway bool) error {
 	fmt.Printf("Launching %s environment on %s...\n", env.Name, env.InstanceType)
 
 	// Setup AWS client and determine region
@@ -180,7 +216,7 @@ func executeLaunch(ctx context.Context, env *config.Environment, customAMI, prof
 	}
 
 	// Select AMI and generate user data
-	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion, customAMI)
+	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion, customAMI, idleTimeoutSeconds)
 	if err != nil {
 		return err
 	}
@@ -346,7 +382,7 @@ func setupSecurityGroup(ctx context.Context, ec2Client *aws.EC2Client, vpcID, co
 }
 
 // prepareInstanceImage selects AMI and generates user data
-func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, region, customAMI string) (string, string, error) {
+func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, region, customAMI string, idleTimeoutSeconds int) (string, string, error) {
 	var amiID string
 
 	// Use custom AMI if provided, otherwise select base AMI
@@ -377,7 +413,7 @@ func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *co
 	}
 
 	fmt.Println("📜 Generating user data script...")
-	userData, err := config.GenerateUserData(env)
+	userData, err := config.GenerateUserData(env, idleTimeoutSeconds)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate user data: %w", err)
 	}

@@ -2,19 +2,20 @@ package config
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strings"
 )
 
 // GenerateUserData creates a cloud-init user data script for the given environment
-func GenerateUserData(env *Environment) (string, error) {
-	script := generateUserDataScript(env)
+func GenerateUserData(env *Environment, idleTimeoutSeconds int) (string, error) {
+	script := generateUserDataScript(env, idleTimeoutSeconds)
 	// AWS expects user data to be base64 encoded
 	encoded := base64.StdEncoding.EncodeToString([]byte(script))
 	return encoded, nil
 }
 
 // generateUserDataScript creates the actual bash script
-func generateUserDataScript(env *Environment) string {
+func generateUserDataScript(env *Environment, idleTimeoutSeconds int) string {
 	var sb strings.Builder
 
 	// Start with bash shebang and error handling
@@ -203,7 +204,7 @@ func generateUserDataScript(env *Environment) string {
 	sb.WriteString(generateAutoStopScript())
 
 	// Create systemd service files
-	sb.WriteString(generateIdleDetectionServices())
+	sb.WriteString(generateIdleDetectionServices(idleTimeoutSeconds))
 
 	// Enable and start the services
 	sb.WriteString("systemctl daemon-reload\n")
@@ -222,8 +223,8 @@ func generateUserDataScript(env *Environment) string {
 }
 
 // GetRawUserData returns the user data script without base64 encoding (for debugging)
-func GetRawUserData(env *Environment) string {
-	return generateUserDataScript(env)
+func GetRawUserData(env *Environment, idleTimeoutSeconds int) string {
+	return generateUserDataScript(env, idleTimeoutSeconds)
 }
 
 // generateIdleMonitorScript creates the idle monitor script
@@ -441,8 +442,10 @@ chmod +x /usr/local/bin/jupyter-auto-stop.sh
 }
 
 // generateIdleDetectionServices creates the systemd service and timer files
-func generateIdleDetectionServices() string {
-	return `# Create idle monitor systemd service
+func generateIdleDetectionServices(idleTimeoutSeconds int) string {
+	idleTimeoutEnv := fmt.Sprintf("Environment=\"IDLE_TIMEOUT=%d\"", idleTimeoutSeconds)
+
+	return fmt.Sprintf(`# Create idle monitor systemd service
 cat > /etc/systemd/system/jupyter-idle-monitor.service << 'SERVICE_EOF'
 [Unit]
 Description=Jupyter Idle Monitor
@@ -484,7 +487,7 @@ After=network.target jupyter-idle-monitor.service
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/jupyter-auto-stop.sh
-Environment="IDLE_TIMEOUT=14400"
+%s
 Environment="IDLE_ACTION=stop"
 StandardOutput=journal
 StandardError=journal
@@ -508,5 +511,5 @@ AccuracySec=30s
 WantedBy=timers.target
 TIMER_EOF
 
-`
+`, idleTimeoutEnv)
 }
