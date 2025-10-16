@@ -41,9 +41,10 @@ archives:
       - CHANGELOG.md
       - environments/computational-bio.yaml
       - environments/data-science.yaml
-      - environments/deep-learning.yaml
+      - environments/julia-science.yaml
       - environments/minimal.yaml
       - environments/ml-pytorch.yaml
+      - environments/ml-tensorflow.yaml
       - environments/r-stats.yaml
     formats:
       - tar.gz
