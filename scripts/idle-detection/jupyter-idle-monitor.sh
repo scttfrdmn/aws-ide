@@ -90,7 +90,7 @@ check_running_processes() {
     # Check for child processes with significant CPU usage
     for pid in $jupyter_pids; do
         local children=$(pgrep -P "$pid" || echo "")
-        for child in $children; then
+        for child in $children; do
             # Check if process is using CPU (via ps)
             local cpu_usage=$(ps -p "$child" -o %cpu= 2>/dev/null | awk '{print int($1)}')
             if [ -n "$cpu_usage" ] && [ "$cpu_usage" -gt 5 ]; then
@@ -107,16 +107,10 @@ check_running_processes() {
 
 # Check network activity to Jupyter
 check_network_activity() {
-    # Look for recent connections to Jupyter port (excluding this script)
-    local recent_connections=$(ss -tn state established "( sport = :${JUPYTER_PORT} or dport = :${JUPYTER_PORT} )" 2>/dev/null | grep -v "State" | wc -l)
-
-    if [ "$recent_connections" -gt 0 ]; then
-        log "Active network connections to Jupyter: $recent_connections"
-        return 0  # Active
-    fi
-
-    log "No active network connections to Jupyter"
-    return 1  # Idle
+    # Network activity check removed - Jupyter API checks (kernels/sessions) are sufficient
+    # and more accurate for detecting actual user activity
+    log "Skipping network connection check (using Jupyter API instead)"
+    return 1  # Idle (don't mark as active based on network alone)
 }
 
 # Main idle detection logic

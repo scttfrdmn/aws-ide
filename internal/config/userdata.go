@@ -306,12 +306,7 @@ check_running_processes() {
 }
 
 check_network_activity() {
-    local recent_connections=$(ss -tn state established "( sport = :${JUPYTER_PORT} or dport = :${JUPYTER_PORT} )" 2>/dev/null | grep -v "State" | wc -l)
-    if [ "$recent_connections" -gt 0 ]; then
-        log "Active network connections to Jupyter: $recent_connections"
-        return 0
-    fi
-    log "No active network connections to Jupyter"
+    log "Skipping network connection check (using Jupyter API instead)"
     return 1
 }
 
