@@ -6,7 +6,6 @@ packages:
   - r-base
   - r-base-dev
   - python3-pip
-  - jupyter
   - git
   - htop
   - awscli
@@ -20,8 +19,6 @@ pip_packages:
   - rpy2
   - notebook
   - ipywidgets
-jupyter_extensions:
-  - jupyterlab
 r_packages:
   - IRkernel
   - tidyverse

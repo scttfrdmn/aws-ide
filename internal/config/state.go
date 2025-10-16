@@ -25,6 +25,7 @@ type Instance struct {
 	TunnelPID     int       `json:"tunnel_pid,omitempty"`
 	Region        string    `json:"region"`
 	SecurityGroup string    `json:"security_group"`
+	AMIBase       string    `json:"ami_base,omitempty"`
 }
 
 // LocalState manages the local state file tracking active instances

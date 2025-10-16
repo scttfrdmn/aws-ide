@@ -274,12 +274,134 @@ func (e *EC2Client) StopInstance(ctx context.Context, instanceID string, hiberna
 	return err
 }
 
+// StartInstance starts a stopped EC2 instance
+func (e *EC2Client) StartInstance(ctx context.Context, instanceID string) error {
+	_, err := e.client.StartInstances(ctx, &ec2.StartInstancesInput{
+		InstanceIds: []string{instanceID},
+	})
+	return err
+}
+
 // TerminateInstance permanently terminates an EC2 instance
 func (e *EC2Client) TerminateInstance(ctx context.Context, instanceID string) error {
 	_, err := e.client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
 		InstanceIds: []string{instanceID},
 	})
 	return err
+}
+
+// CreateAMI creates an Amazon Machine Image from an EC2 instance
+func (e *EC2Client) CreateAMI(ctx context.Context, instanceID, name, description string, noReboot bool) (string, error) {
+	input := &ec2.CreateImageInput{
+		InstanceId:  aws.String(instanceID),
+		Name:        aws.String(name),
+		Description: aws.String(description),
+		NoReboot:    aws.Bool(noReboot),
+		TagSpecifications: []types.TagSpecification{
+			{
+				ResourceType: types.ResourceTypeImage,
+				Tags: []types.Tag{
+					{Key: aws.String("Name"), Value: aws.String(name)},
+					{Key: aws.String("CreatedBy"), Value: aws.String("aws-jupyter-cli")},
+				},
+			},
+		},
+	}
+
+	result, err := e.client.CreateImage(ctx, input)
+	if err != nil {
+		return "", err
+	}
+
+	return *result.ImageId, nil
+}
+
+// AMIInfo contains information about a custom AMI
+type AMIInfo struct {
+	ID           string
+	Name         string
+	Description  string
+	State        string
+	CreationDate time.Time
+}
+
+// ListCustomAMIs lists all AMIs created by aws-jupyter CLI
+func (e *EC2Client) ListCustomAMIs(ctx context.Context) ([]AMIInfo, error) {
+	input := &ec2.DescribeImagesInput{
+		Owners: []string{"self"},
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("tag:CreatedBy"),
+				Values: []string{"aws-jupyter-cli"},
+			},
+		},
+	}
+
+	result, err := e.client.DescribeImages(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	amis := make([]AMIInfo, 0, len(result.Images))
+	for _, image := range result.Images {
+		creationDate, _ := time.Parse(time.RFC3339, aws.ToString(image.CreationDate))
+		amis = append(amis, AMIInfo{
+			ID:           aws.ToString(image.ImageId),
+			Name:         aws.ToString(image.Name),
+			Description:  aws.ToString(image.Description),
+			State:        string(image.State),
+			CreationDate: creationDate,
+		})
+	}
+
+	return amis, nil
+}
+
+// DeleteAMI deletes an AMI and its associated snapshots
+func (e *EC2Client) DeleteAMI(ctx context.Context, amiID string) error {
+	// First, get the AMI details to find associated snapshots
+	describeInput := &ec2.DescribeImagesInput{
+		ImageIds: []string{amiID},
+	}
+
+	describeResult, err := e.client.DescribeImages(ctx, describeInput)
+	if err != nil {
+		return fmt.Errorf("failed to describe AMI: %w", err)
+	}
+
+	if len(describeResult.Images) == 0 {
+		return fmt.Errorf("AMI %s not found", amiID)
+	}
+
+	image := describeResult.Images[0]
+
+	// Deregister the AMI
+	deregisterInput := &ec2.DeregisterImageInput{
+		ImageId: aws.String(amiID),
+	}
+
+	_, err = e.client.DeregisterImage(ctx, deregisterInput)
+	if err != nil {
+		return fmt.Errorf("failed to deregister AMI: %w", err)
+	}
+
+	// Delete associated snapshots
+	for _, blockDevice := range image.BlockDeviceMappings {
+		if blockDevice.Ebs != nil && blockDevice.Ebs.SnapshotId != nil {
+			snapshotID := *blockDevice.Ebs.SnapshotId
+			deleteSnapshotInput := &ec2.DeleteSnapshotInput{
+				SnapshotId: aws.String(snapshotID),
+			}
+
+			_, err := e.client.DeleteSnapshot(ctx, deleteSnapshotInput)
+			if err != nil {
+				// Log but don't fail - snapshot might be in use or already deleted
+				fmt.Printf("Warning: Failed to delete snapshot %s: %v\n", snapshotID, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // LaunchParams contains all parameters needed to launch a new EC2 instance

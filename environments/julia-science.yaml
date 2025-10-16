@@ -1,0 +1,32 @@
+name: "Julia Scientific Computing"
+instance_type: "m7g.large"
+ami_base: "ubuntu22-arm64"
+ebs_volume_size: 25
+packages:
+  - python3-pip
+  - git
+  - htop
+  - awscli
+  - build-essential
+  - wget
+  - curl
+pip_packages:
+  - jupyterlab
+  - notebook
+  - ipywidgets
+  - matplotlib
+  - pandas
+  - numpy
+julia_packages:
+  - IJulia
+  - Plots
+  - DataFrames
+  - CSV
+  - StatsBase
+  - Distributions
+  - DifferentialEquations
+  - Optimization
+  - JuMP
+environment_vars:
+  PYTHONPATH: "/home/ubuntu/notebooks"
+  JULIA_DEPOT_PATH: "/home/ubuntu/.julia"

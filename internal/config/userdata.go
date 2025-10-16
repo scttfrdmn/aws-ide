@@ -34,6 +34,13 @@ func generateUserDataScript(env *Environment) string {
 	sb.WriteString("apt-get update -y\n")
 	sb.WriteString("apt-get upgrade -y\n\n")
 
+	// Install SSM Agent
+	sb.WriteString("# Install AWS Systems Manager Agent\n")
+	sb.WriteString("echo 'Installing SSM Agent...'\n")
+	sb.WriteString("snap install amazon-ssm-agent --classic\n")
+	sb.WriteString("systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service\n")
+	sb.WriteString("systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service\n\n")
+
 	// Install system packages
 	if len(env.Packages) > 0 {
 		sb.WriteString("# Install system packages\n")
@@ -66,14 +73,66 @@ func generateUserDataScript(env *Environment) string {
 		}
 	}
 
-	// Install Jupyter extensions
-	if len(env.JupyterExtensions) > 0 {
-		sb.WriteString("# Install Jupyter extensions\n")
-		sb.WriteString("echo 'Installing Jupyter extensions...'\n")
-		for _, ext := range env.JupyterExtensions {
-			sb.WriteString("jupyter labextension install " + ext + " --no-build\n")
+	// Install R packages if any
+	if len(env.RPackages) > 0 {
+		sb.WriteString("# Install R packages\n")
+		sb.WriteString("echo 'Installing R packages...'\n")
+		sb.WriteString("R -e \"install.packages(c(")
+		for i, pkg := range env.RPackages {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString("'" + pkg + "'")
 		}
-		sb.WriteString("jupyter lab build\n\n")
+		sb.WriteString("), repos='https://cloud.r-project.org/', dependencies=TRUE)\"\n\n")
+
+		// Install IRkernel if present
+		hasIRkernel := false
+		for _, pkg := range env.RPackages {
+			if pkg == "IRkernel" {
+				hasIRkernel = true
+				break
+			}
+		}
+		if hasIRkernel {
+			sb.WriteString("# Configure IRkernel for Jupyter\n")
+			sb.WriteString("R -e \"IRkernel::installspec(user = FALSE)\"\n\n")
+		}
+	}
+
+	// Install Julia and packages if any
+	if len(env.JuliaPackages) > 0 {
+		sb.WriteString("# Install Julia\n")
+		sb.WriteString("echo 'Installing Julia...'\n")
+		sb.WriteString("wget -q https://julialang-s3.julialang.org/bin/linux/aarch64/1.10/julia-1.10.5-linux-aarch64.tar.gz -O /tmp/julia.tar.gz\n")
+		sb.WriteString("tar -xzf /tmp/julia.tar.gz -C /opt/\n")
+		sb.WriteString("ln -s /opt/julia-1.10.5/bin/julia /usr/local/bin/julia\n")
+		sb.WriteString("rm /tmp/julia.tar.gz\n\n")
+
+		sb.WriteString("# Install Julia packages\n")
+		sb.WriteString("echo 'Installing Julia packages...'\n")
+		sb.WriteString("sudo -u ubuntu julia -e 'using Pkg; ")
+		for i, pkg := range env.JuliaPackages {
+			if i > 0 {
+				sb.WriteString("; ")
+			}
+			sb.WriteString("Pkg.add(\"" + pkg + "\")")
+		}
+		sb.WriteString("'\n\n")
+
+		// Configure IJulia if present
+		hasIJulia := false
+		for _, pkg := range env.JuliaPackages {
+			if pkg == "IJulia" {
+				hasIJulia = true
+				break
+			}
+		}
+		if hasIJulia {
+			sb.WriteString("# Configure IJulia kernel for Jupyter (system-wide)\n")
+			sb.WriteString("sudo -u ubuntu julia -e 'using IJulia; installkernel(\"Julia\", \"--user\")'\n")
+			sb.WriteString("sudo cp -r /home/ubuntu/.local/share/jupyter/kernels/julia-* /usr/local/share/jupyter/kernels/ 2>/dev/null || true\n\n")
+		}
 	}
 
 	// Setup jupyter directory and permissions
@@ -115,6 +174,7 @@ func generateUserDataScript(env *Environment) string {
 	sb.WriteString("[Service]\n")
 	sb.WriteString("Type=simple\n")
 	sb.WriteString("User=ubuntu\n")
+	sb.WriteString("Environment=HOME=/home/ubuntu\n")
 	sb.WriteString("WorkingDirectory=/home/ubuntu/notebooks\n")
 	sb.WriteString("ExecStart=/usr/local/bin/jupyter lab\n")
 	sb.WriteString("Restart=on-failure\n")

@@ -225,14 +225,47 @@ func (i *IAMClient) createInstanceProfile(ctx context.Context, profileName, role
 		return nil, fmt.Errorf("failed to add role to instance profile: %w", err)
 	}
 
-	// Wait a moment for the instance profile to be ready
-	time.Sleep(2 * time.Second)
+	// Wait for the instance profile to propagate (IAM is eventually consistent)
+	fmt.Println("Waiting for IAM instance profile to propagate...")
+	if err := i.waitForInstanceProfileReady(ctx, profileName); err != nil {
+		return nil, fmt.Errorf("instance profile not ready: %w", err)
+	}
 
 	return &InstanceProfileInfo{
 		Name: profileName,
 		Arn:  aws.ToString(result.InstanceProfile.Arn),
 		Role: roleName,
 	}, nil
+}
+
+// waitForInstanceProfileReady polls until the instance profile is fully propagated
+func (i *IAMClient) waitForInstanceProfileReady(ctx context.Context, profileName string) error {
+	maxWaitTime := 30 * time.Second
+	checkInterval := 2 * time.Second
+	timeout := time.After(maxWaitTime)
+	ticker := time.NewTicker(checkInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for instance profile to be ready")
+		case <-ticker.C:
+			// Try to get the instance profile with the role attached
+			result, err := i.client.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+				InstanceProfileName: aws.String(profileName),
+			})
+			if err != nil {
+				continue // Not ready yet
+			}
+
+			// Check if role is attached
+			if len(result.InstanceProfile.Roles) > 0 {
+				fmt.Println("✓ IAM instance profile ready")
+				return nil
+			}
+		}
+	}
 }
 
 // ValidateSessionManagerRole checks if the role has the correct policies attached

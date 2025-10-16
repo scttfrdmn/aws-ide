@@ -22,6 +22,7 @@ func NewLaunchCmd() *cobra.Command {
 	var (
 		environment       string
 		instanceType      string
+		customAMI         string
 		idleTimeout       string
 		profile           string
 		region            string
@@ -36,12 +37,13 @@ func NewLaunchCmd() *cobra.Command {
 		Use:   "launch",
 		Short: "Launch a new Jupyter instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone, dryRun, connectionMethod, subnetType, createNatGateway)
+			return runLaunch(environment, instanceType, customAMI, idleTimeout, profile, region, availabilityZone, dryRun, connectionMethod, subnetType, createNatGateway)
 		},
 	}
 
 	cmd.Flags().StringVarP(&environment, "env", "e", "data-science", "Environment configuration to use")
 	cmd.Flags().StringVarP(&instanceType, "instance-type", "t", "", "Override instance type")
+	cmd.Flags().StringVar(&customAMI, "ami", "", "Use custom AMI instead of base AMI (see: list-amis)")
 	cmd.Flags().StringVarP(&idleTimeout, "idle-timeout", "i", "4h", "Auto-shutdown timeout")
 	cmd.Flags().StringVarP(&profile, "profile", "p", "default", "AWS profile to use")
 	cmd.Flags().StringVarP(&region, "region", "r", "", "AWS region")
@@ -54,7 +56,7 @@ func NewLaunchCmd() *cobra.Command {
 	return cmd
 }
 
-func runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool) error {
+func runLaunch(environment, instanceType, customAMI, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool) error {
 	ctx := context.Background()
 
 	// Load and validate environment configuration
@@ -75,7 +77,7 @@ func runLaunch(environment, instanceType, idleTimeout, profile, region, availabi
 		return executeDryRun(ctx, env, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType, createNatGateway)
 	}
 
-	return executeLaunch(ctx, env, profile, region, availabilityZone, connectionMethod, subnetType, createNatGateway)
+	return executeLaunch(ctx, env, customAMI, profile, region, availabilityZone, connectionMethod, subnetType, createNatGateway)
 }
 
 // loadAndValidateEnvironment loads the environment configuration and applies overrides
@@ -141,7 +143,7 @@ func executeDryRun(ctx context.Context, env *config.Environment, profile, region
 }
 
 // executeLaunch performs the actual instance launch
-func executeLaunch(ctx context.Context, env *config.Environment, profile, region, availabilityZone, connectionMethod, subnetType string, createNatGateway bool) error {
+func executeLaunch(ctx context.Context, env *config.Environment, customAMI, profile, region, availabilityZone, connectionMethod, subnetType string, createNatGateway bool) error {
 	fmt.Printf("Launching %s environment on %s...\n", env.Name, env.InstanceType)
 
 	// Setup AWS client and determine region
@@ -150,10 +152,19 @@ func executeLaunch(ctx context.Context, env *config.Environment, profile, region
 		return err
 	}
 
-	// Setup authentication (SSH or Session Manager)
-	keyInfo, instanceProfile, err := setupAuthentication(ctx, ec2Client, profile, actualRegion, connectionMethod)
+	// Setup IAM instance profile (always, for SSM access)
+	instanceProfile, err := setupInstanceProfile(ctx, profile)
 	if err != nil {
 		return err
+	}
+
+	// Setup SSH key if needed
+	var keyInfo *aws.KeyPairInfo
+	if connectionMethod == connectionMethodSSH {
+		keyInfo, err = setupSSHKey(ctx, ec2Client, actualRegion)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Setup networking (subnet and NAT gateway)
@@ -169,13 +180,13 @@ func executeLaunch(ctx context.Context, env *config.Environment, profile, region
 	}
 
 	// Select AMI and generate user data
-	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion)
+	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion, customAMI)
 	if err != nil {
 		return err
 	}
 
 	// Launch and wait for instance
-	instance, err := launchAndWaitForInstance(ctx, ec2Client, env, subnet, securityGroup, amiID, userData, keyInfo, instanceProfile, connectionMethod)
+	instance, err := launchAndWaitForInstance(ctx, ec2Client, env, subnet, securityGroup, amiID, userData, keyInfo, instanceProfile)
 	if err != nil {
 		return err
 	}
@@ -209,27 +220,37 @@ func setupAWSClient(ctx context.Context, profile, region string) (*aws.EC2Client
 	return ec2Client, actualRegion, nil
 }
 
-// setupAuthentication configures SSH or Session Manager authentication
-func setupAuthentication(ctx context.Context, ec2Client *aws.EC2Client, profile, region, connectionMethod string) (*aws.KeyPairInfo, *aws.InstanceProfileInfo, error) {
-	if connectionMethod == connectionMethodSSH {
-		return setupSSHAuthentication(ctx, ec2Client, region)
+// setupInstanceProfile configures IAM instance profile with SSM permissions (always created)
+func setupInstanceProfile(ctx context.Context, profile string) (*aws.InstanceProfileInfo, error) {
+	fmt.Println("🔐 Setting up IAM instance profile with SSM permissions...")
+
+	iamClient, err := aws.NewIAMClient(ctx, profile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create IAM client: %w", err)
 	}
-	return setupSessionManagerAuthentication(ctx, profile)
+
+	instanceProfile, err := iamClient.GetOrCreateSessionManagerRole(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup Session Manager role: %w", err)
+	}
+
+	fmt.Printf("Using IAM instance profile: %s\n", instanceProfile.Name)
+	return instanceProfile, nil
 }
 
-// setupSSHAuthentication configures SSH key pair
-func setupSSHAuthentication(ctx context.Context, ec2Client *aws.EC2Client, region string) (*aws.KeyPairInfo, *aws.InstanceProfileInfo, error) {
+// setupSSHKey configures SSH key pair
+func setupSSHKey(ctx context.Context, ec2Client *aws.EC2Client, region string) (*aws.KeyPairInfo, error) {
 	fmt.Println("🔑 Setting up SSH key pair...")
 
 	keyStorage, err := config.DefaultKeyStorage()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize key storage: %w", err)
+		return nil, fmt.Errorf("failed to initialize key storage: %w", err)
 	}
 
 	keyStrategy := aws.DefaultKeyPairStrategy(region)
 	keyInfo, err := ec2Client.GetOrCreateKeyPair(ctx, keyStrategy)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to setup SSH key pair: %w", err)
+		return nil, fmt.Errorf("failed to setup SSH key pair: %w", err)
 	}
 
 	fmt.Printf("Using SSH key pair: %s\n", keyInfo.Name)
@@ -237,35 +258,17 @@ func setupSSHAuthentication(ctx context.Context, ec2Client *aws.EC2Client, regio
 	if keyInfo.PrivateKey != "" {
 		fmt.Println("Saving SSH private key locally...")
 		if err := keyStorage.SavePrivateKey(keyInfo); err != nil {
-			return nil, nil, fmt.Errorf("failed to save SSH private key: %w", err)
+			return nil, fmt.Errorf("failed to save SSH private key: %w", err)
 		}
 		fmt.Printf("SSH private key saved to: %s\n", keyStorage.GetKeyPath(keyInfo.Name))
 	} else {
 		if !keyStorage.HasPrivateKey(keyInfo.Name) {
-			return nil, nil, fmt.Errorf("SSH key pair '%s' exists in AWS but private key not found locally", keyInfo.Name)
+			return nil, fmt.Errorf("SSH key pair '%s' exists in AWS but private key not found locally", keyInfo.Name)
 		}
 		fmt.Printf("Using existing local private key: %s\n", keyStorage.GetKeyPath(keyInfo.Name))
 	}
 
-	return keyInfo, nil, nil
-}
-
-// setupSessionManagerAuthentication configures Session Manager IAM role
-func setupSessionManagerAuthentication(ctx context.Context, profile string) (*aws.KeyPairInfo, *aws.InstanceProfileInfo, error) {
-	fmt.Println("🔐 Setting up Session Manager IAM role...")
-
-	iamClient, err := aws.NewIAMClient(ctx, profile)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create IAM client: %w", err)
-	}
-
-	instanceProfile, err := iamClient.GetOrCreateSessionManagerRole(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to setup Session Manager role: %w", err)
-	}
-
-	fmt.Printf("Using IAM instance profile: %s\n", instanceProfile.Name)
-	return nil, instanceProfile, nil
+	return keyInfo, nil
 }
 
 // setupNetworking configures subnet and NAT gateway
@@ -343,13 +346,34 @@ func setupSecurityGroup(ctx context.Context, ec2Client *aws.EC2Client, vpcID, co
 }
 
 // prepareInstanceImage selects AMI and generates user data
-func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, region string) (string, string, error) {
-	fmt.Println("🔍 Selecting AMI for environment...")
+func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, region, customAMI string) (string, string, error) {
+	var amiID string
 
-	amiSelector := aws.NewAMISelector(region)
-	amiID, err := amiSelector.GetAMI(ctx, ec2Client, env.AMIBase)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to find AMI: %w", err)
+	// Use custom AMI if provided, otherwise select base AMI
+	if customAMI != "" {
+		fmt.Printf("🔍 Using custom AMI: %s\n", customAMI)
+
+		// Validate that the AMI exists
+		instanceInfo, err := ec2Client.GetInstanceInfo(ctx, customAMI)
+		if err != nil {
+			// Try as AMI ID directly
+			amiID = customAMI
+			fmt.Printf("⚠️  Warning: Could not validate AMI %s, proceeding anyway\n", customAMI)
+		} else {
+			// If we got instance info, something's wrong - this should be an AMI, not instance
+			if instanceInfo != nil {
+				return "", "", fmt.Errorf("provided ID appears to be an instance ID, not an AMI ID")
+			}
+			amiID = customAMI
+		}
+	} else {
+		fmt.Println("🔍 Selecting base AMI for environment...")
+		amiSelector := aws.NewAMISelector(region)
+		var err error
+		amiID, err = amiSelector.GetAMI(ctx, ec2Client, env.AMIBase)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to find AMI: %w", err)
+		}
 	}
 
 	fmt.Println("📜 Generating user data script...")
@@ -362,7 +386,7 @@ func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *co
 }
 
 // launchAndWaitForInstance launches the EC2 instance and waits for it to be running
-func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, subnet *aws.SubnetInfo, securityGroup *aws.SecurityGroupInfo, amiID, userData string, keyInfo *aws.KeyPairInfo, instanceProfile *aws.InstanceProfileInfo, connectionMethod string) (*types.Instance, error) {
+func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, subnet *aws.SubnetInfo, securityGroup *aws.SecurityGroupInfo, amiID, userData string, keyInfo *aws.KeyPairInfo, instanceProfile *aws.InstanceProfileInfo) (*types.Instance, error) {
 	fmt.Printf("🚀 Launching EC2 instance (%s)...\n", env.InstanceType)
 
 	launchParams := aws.LaunchParams{
@@ -373,12 +397,12 @@ func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env
 		EBSVolumeSize:   env.EBSVolumeSize,
 		Environment:     env.Name,
 		SubnetID:        subnet.ID,
+		InstanceProfile: instanceProfile.Name,
 	}
 
-	if connectionMethod == connectionMethodSSH {
+	// Add SSH key if provided
+	if keyInfo != nil {
 		launchParams.KeyPairName = keyInfo.Name
-	} else {
-		launchParams.InstanceProfile = instanceProfile.Name
 	}
 
 	instance, err := ec2Client.LaunchInstance(ctx, launchParams)
@@ -397,7 +421,7 @@ func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env
 	return ec2Client.GetInstanceInfo(ctx, instanceID)
 }
 
-// displayInstanceInfo shows the launched instance information
+// displayInstanceInfo shows the launched instance information and saves to state
 func displayInstanceInfo(instance *types.Instance, env *config.Environment, subnet *aws.SubnetInfo, keyInfo *aws.KeyPairInfo, connectionMethod, subnetType, profile string) error {
 	publicIP := "N/A (private subnet)"
 	if instance.PublicIpAddress != nil {
@@ -405,6 +429,11 @@ func displayInstanceInfo(instance *types.Instance, env *config.Environment, subn
 	}
 	privateIP := *instance.PrivateIpAddress
 	instanceID := *instance.InstanceId
+
+	// Save instance to local state
+	if err := saveInstanceToState(instance, env, keyInfo, connectionMethod); err != nil {
+		fmt.Printf("⚠️  Warning: Failed to save instance to local state: %v\n", err)
+	}
 
 	fmt.Println("\n🎉 Instance launched successfully!")
 	fmt.Printf("Instance ID: %s\n", instanceID)
@@ -417,7 +446,12 @@ func displayInstanceInfo(instance *types.Instance, env *config.Environment, subn
 		fmt.Printf("SSH Key: %s\n", keyInfo.Name)
 		fmt.Println("\n🔗 To connect:")
 		if subnet.IsPublic {
-			fmt.Printf("ssh -i ~/.aws-jupyter/keys/%s.pem ec2-user@%s\n", keyInfo.Name, publicIP)
+			// Use ubuntu for Ubuntu AMIs, ec2-user for Amazon Linux
+			username := "ubuntu"
+			if env.AMIBase == "amazonlinux2-arm64" || env.AMIBase == "amazonlinux2-x86_64" {
+				username = "ec2-user"
+			}
+			fmt.Printf("ssh -i ~/.aws-jupyter/keys/%s.pem %s@%s\n", keyInfo.Name, username, publicIP)
 		} else {
 			fmt.Println("Use Session Manager or VPN/bastion to connect to private instance")
 		}
@@ -427,9 +461,59 @@ func displayInstanceInfo(instance *types.Instance, env *config.Environment, subn
 	}
 
 	fmt.Println("\n📓 Jupyter Lab will be available at: http://localhost:8888")
-	fmt.Println("Use 'aws-jupyter connect' to setup port forwarding")
+	fmt.Printf("Use 'aws-jupyter connect %s' to setup port forwarding\n", instanceID)
 
 	return nil
+}
+
+// saveInstanceToState saves the launched instance to local state
+func saveInstanceToState(instance *types.Instance, env *config.Environment, keyInfo *aws.KeyPairInfo, connectionMethod string) error {
+	state, err := config.LoadState()
+	if err != nil {
+		return fmt.Errorf("failed to load state: %w", err)
+	}
+
+	publicIP := ""
+	if instance.PublicIpAddress != nil {
+		publicIP = *instance.PublicIpAddress
+	}
+
+	keyPairName := ""
+	if keyInfo != nil {
+		keyPairName = keyInfo.Name
+	}
+
+	// Determine region from placement
+	region := ""
+	if instance.Placement != nil && instance.Placement.AvailabilityZone != nil {
+		// Extract region from AZ (e.g., us-east-1a -> us-east-1)
+		az := *instance.Placement.AvailabilityZone
+		if len(az) > 0 {
+			region = az[:len(az)-1]
+		}
+	}
+
+	// Get security group
+	securityGroup := ""
+	if len(instance.SecurityGroups) > 0 && instance.SecurityGroups[0].GroupId != nil {
+		securityGroup = *instance.SecurityGroups[0].GroupId
+	}
+
+	state.Instances[*instance.InstanceId] = &config.Instance{
+		ID:            *instance.InstanceId,
+		Environment:   env.Name,
+		InstanceType:  env.InstanceType,
+		PublicIP:      publicIP,
+		KeyPair:       keyPairName,
+		LaunchedAt:    *instance.LaunchTime,
+		IdleTimeout:   "", // Not tracked yet
+		TunnelPID:     0,
+		Region:        region,
+		SecurityGroup: securityGroup,
+		AMIBase:       env.AMIBase,
+	}
+
+	return state.Save()
 }
 
 // printDryRunConfiguration displays the dry run configuration

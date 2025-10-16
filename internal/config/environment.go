@@ -17,6 +17,7 @@ type Environment struct {
 	Packages          []string          `yaml:"packages"`
 	PipPackages       []string          `yaml:"pip_packages"`
 	RPackages         []string          `yaml:"r_packages,omitempty"`
+	JuliaPackages     []string          `yaml:"julia_packages,omitempty"`
 	JupyterExtensions []string          `yaml:"jupyter_extensions"`
 	EnvironmentVars   map[string]string `yaml:"environment_vars"`
 }

@@ -16,12 +16,16 @@ func NewConnectCmd() *cobra.Command {
 	var localPort int
 
 	cmd := &cobra.Command{
-		Use:   "connect INSTANCE_ID",
+		Use:   "connect [INSTANCE_ID]",
 		Short: "Connect to an existing instance",
 		Long:  "Setup SSH tunnel or Session Manager port forwarding to access Jupyter Lab",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runConnect(args[0], localPort)
+			instanceID := ""
+			if len(args) > 0 {
+				instanceID = args[0]
+			}
+			return runConnect(instanceID, localPort)
 		},
 	}
 
@@ -36,6 +40,15 @@ func runConnect(instanceID string, localPort int) error {
 	state, err := config.LoadState()
 	if err != nil {
 		return fmt.Errorf("failed to load state: %w", err)
+	}
+
+	// If no instance ID provided, auto-select
+	if instanceID == "" {
+		selectedID, err := selectInstance(state)
+		if err != nil {
+			return err
+		}
+		instanceID = selectedID
 	}
 
 	// Get instance from state
@@ -111,6 +124,13 @@ func setupSSHTunnel(instanceID string, localPort int, publicIP string, instance 
 
 	// Start SSH tunnel in background
 	remotePort := 8888
+
+	// Determine SSH username based on AMI type
+	username := "ubuntu" // Default to ubuntu
+	if instance.AMIBase == "amazonlinux2-arm64" || instance.AMIBase == "amazonlinux2-x86_64" {
+		username = "ec2-user"
+	}
+
 	cmd := exec.Command("ssh",
 		"-i", keyPath,
 		"-N",                                                        // No remote command
@@ -119,7 +139,7 @@ func setupSSHTunnel(instanceID string, localPort int, publicIP string, instance 
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "ServerAliveInterval=60",
 		"-o", "ServerAliveCountMax=3",
-		fmt.Sprintf("ec2-user@%s", publicIP),
+		fmt.Sprintf("%s@%s", username, publicIP),
 	)
 
 	if err := cmd.Start(); err != nil {
@@ -172,4 +192,34 @@ func setupSSMPortForwarding(instanceID string, localPort int, instance *config.I
 	fmt.Println("To stop the tunnel: aws-jupyter stop " + instanceID)
 
 	return nil
+}
+
+// selectInstance automatically selects an instance when none is specified
+func selectInstance(state *config.LocalState) (string, error) {
+	if len(state.Instances) == 0 {
+		return "", fmt.Errorf("no instances found. Launch an instance first with 'aws-jupyter launch'")
+	}
+
+	if len(state.Instances) == 1 {
+		// Only one instance, auto-select it
+		for id := range state.Instances {
+			fmt.Printf("Auto-selecting instance: %s\n", id)
+			return id, nil
+		}
+	}
+
+	// Multiple instances, show list and prompt
+	fmt.Println("Multiple instances found:")
+	fmt.Println()
+	for id, inst := range state.Instances {
+		fmt.Printf("  %s\n", id)
+		fmt.Printf("    Environment: %s\n", inst.Environment)
+		fmt.Printf("    Type: %s\n", inst.InstanceType)
+		if inst.PublicIP != "" {
+			fmt.Printf("    Public IP: %s\n", inst.PublicIP)
+		}
+		fmt.Printf("    Launched: %s\n", inst.LaunchedAt.Format("2006-01-02 15:04:05"))
+		fmt.Println()
+	}
+	return "", fmt.Errorf("please specify which instance to connect to: aws-jupyter connect INSTANCE_ID")
 }
