@@ -43,6 +43,16 @@ A powerful CLI tool for launching secure Jupyter Lab instances on AWS EC2 Gravit
 
 ## Installation
 
+### Conda / Mamba (Data Scientists - Recommended)
+
+```bash
+# Using conda
+conda install -c conda-forge aws-jupyter
+
+# Using mamba (faster)
+mamba install -c conda-forge aws-jupyter
+```
+
 ### Homebrew (macOS and Linux)
 
 ```bash
