@@ -23,6 +23,10 @@ func NewAMISelector(region string) *AMISelector {
 func (a *AMISelector) GetAMI(ctx context.Context, client *EC2Client, amiBase string) (string, error) {
 	// Map of AMI base names to Ubuntu versions and architectures
 	switch amiBase {
+	case "ubuntu24-arm64":
+		return a.findUbuntuAMI(ctx, client, "24.04", "arm64")
+	case "ubuntu24-x86_64":
+		return a.findUbuntuAMI(ctx, client, "24.04", "x86_64")
 	case "ubuntu22-arm64":
 		return a.findUbuntuAMI(ctx, client, "22.04", "arm64")
 	case "ubuntu22-x86_64":
@@ -36,8 +40,8 @@ func (a *AMISelector) GetAMI(ctx context.Context, client *EC2Client, amiBase str
 	case "amazonlinux2-x86_64":
 		return a.findAmazonLinuxAMI(ctx, client, "2", "x86_64")
 	default:
-		// Default to Ubuntu 22.04 ARM64 for Graviton instances
-		return a.findUbuntuAMI(ctx, client, "22.04", "arm64")
+		// Default to Ubuntu 24.04 ARM64 for Graviton instances (LTS until 2029)
+		return a.findUbuntuAMI(ctx, client, "24.04", "arm64")
 	}
 }
 
@@ -45,6 +49,7 @@ func (a *AMISelector) GetAMI(ctx context.Context, client *EC2Client, amiBase str
 func (a *AMISelector) findUbuntuAMI(ctx context.Context, client *EC2Client, version, arch string) (string, error) {
 	// Ubuntu AMI name pattern using codenames
 	codenames := map[string]string{
+		"24.04": "noble",
 		"22.04": "jammy",
 		"20.04": "focal",
 		"18.04": "bionic",
