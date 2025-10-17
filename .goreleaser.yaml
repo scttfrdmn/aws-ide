@@ -1,16 +1,38 @@
 version: 2
 
-project_name: aws-jupyter
+project_name: aws-ide
 
 before:
   hooks:
-    - go mod tidy
-    - go generate ./...
+    - go work sync
+    - go mod tidy -C apps/jupyter
+    - go mod tidy -C apps/rstudio
+    - go mod tidy -C pkg
 
 builds:
   - id: aws-jupyter
-    main: ./cmd/aws-jupyter
+    main: ./apps/jupyter/cmd/aws-jupyter
     binary: aws-jupyter
+    dir: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+  - id: aws-rstudio
+    main: ./apps/rstudio/cmd/aws-rstudio
+    binary: aws-rstudio
+    dir: .
     env:
       - CGO_ENABLED=0
     goos:
@@ -27,9 +49,11 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - id: default
+  - id: jupyter
+    builds:
+      - aws-jupyter
     name_template: >-
-      {{ .ProjectName }}_
+      aws-jupyter_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
@@ -39,19 +63,37 @@ archives:
       - LICENSE
       - README.md
       - CHANGELOG.md
-      - environments/computational-bio.yaml
-      - environments/data-science.yaml
-      - environments/julia-science.yaml
-      - environments/minimal.yaml
-      - environments/ml-pytorch.yaml
-      - environments/ml-tensorflow.yaml
-      - environments/r-stats.yaml
+      - apps/jupyter/README.md
+      - apps/jupyter/environments/*.yaml
     formats:
       - tar.gz
     format_overrides:
       - goos: windows
         formats:
           - zip
+
+  - id: rstudio
+    builds:
+      - aws-rstudio
+    name_template: >-
+      aws-rstudio_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - apps/rstudio/README.md
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
 checksum:
   name_template: 'checksums.txt'
 
@@ -81,24 +123,58 @@ changelog:
 release:
   github:
     owner: scttfrdmn
-    name: aws-jupyter
+    name: aws-ide
   draft: false
   prerelease: auto
   mode: replace
   header: |
     ## Release {{ .Tag }} ({{ .Date }})
 
-    Welcome to this new release!
+    AWS IDE is a monorepo containing multiple cloud-based IDE launchers:
+    - **aws-jupyter**: Launch Jupyter Lab instances on AWS EC2
+    - **aws-rstudio**: Launch RStudio Server instances on AWS EC2
 
+    Both tools share infrastructure from the `pkg/` module for consistent behavior.
   footer: |
     ## Thanks!
 
     Those were the changes on {{ .Tag }}!
 
-homebrew_casks:
-  - repository:
+    See the [CHANGELOG](https://github.com/scttfrdmn/aws-ide/blob/{{ .Tag }}/CHANGELOG.md) for detailed release notes.
+
+# Homebrew formulas for both tools
+brews:
+  - name: aws-jupyter
+    ids:
+      - aws-jupyter
+    repository:
       owner: scttfrdmn
       name: homebrew-tap
-    homepage: https://github.com/scttfrdmn/aws-jupyter
+    homepage: https://github.com/scttfrdmn/aws-ide
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
+    install: |
+      bin.install "aws-jupyter"
+
+      # Install environment templates
+      pkgshare.install Dir["apps/jupyter/environments/*.yaml"]
+      (pkgshare/"environments").mkpath
+      Dir["apps/jupyter/environments/*.yaml"].each do |env|
+        (pkgshare/"environments").install env
+      end
+    test: |
+      system "#{bin}/aws-jupyter", "--version"
+
+  - name: aws-rstudio
+    ids:
+      - aws-rstudio
+    repository:
+      owner: scttfrdmn
+      name: homebrew-tap
+    homepage: https://github.com/scttfrdmn/aws-ide
+    description: CLI tool for launching RStudio Server instances on AWS EC2 Graviton processors
+    license: Apache-2.0
+    install: |
+      bin.install "aws-rstudio"
+    test: |
+      system "#{bin}/aws-rstudio", "--version"
