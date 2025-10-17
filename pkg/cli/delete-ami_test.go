@@ -26,6 +26,11 @@ func TestCleanupStateFile_EmptyDeletedAMIs(t *testing.T) {
 		}
 	}()
 
+	// Ensure config directory exists
+	if err := config.EnsureConfigDir(); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
 	// Create initial state
 	state := &config.LocalState{
 		Instances: map[string]*config.Instance{
@@ -70,6 +75,11 @@ func TestCleanupStateFile_WithDeletedAMIs(t *testing.T) {
 			os.Unsetenv("AWS_IDE_STATE_FILE")
 		}
 	}()
+
+	// Ensure config directory exists
+	if err := config.EnsureConfigDir(); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
 
 	// Create initial state with instances
 	state := &config.LocalState{
