@@ -61,6 +61,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install code-server using official installation script
 	sb.WriteString("# Install code-server\n")
 	sb.WriteString("echo 'Installing code-server...'\n")
+	sb.WriteString("export HOME=/root\n")
 	sb.WriteString("curl -fsSL https://code-server.dev/install.sh | sh\n\n")
 
 	// Install Node.js if specified

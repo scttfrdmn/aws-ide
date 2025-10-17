@@ -57,11 +57,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Detects IAM-related errors and waits for eventual consistency (2s, 4s, 8s, 16s delays)
   - Prevents "Invalid IAM Instance Profile" errors immediately after profile creation
   - User no longer needs to manually wait and retry launch commands
+- **aws-vscode**: code-server installation failure (HOME not set)
+  - Added `export HOME=/root` before running code-server installer
+  - Fixes "sh: HOME: parameter not set" error in cloud-init
+  - VSCode Server now installs and starts successfully on instance launch
+  - Tested end-to-end: Successfully launched and connected to instance i-0ee8065b2c30a96ac
 
 ### Known Issues
-- **aws-vscode**: code-server installation fails in cloud-init (HOME not set)
-  - User-data script needs to be run as specific user, not root
-  - Workaround: Manual installation after instance launch
+- **aws-vscode**: Extensions marketplace not available
+  - code-server (open-source) doesn't include Microsoft's extension marketplace
+  - Extensions can be installed via command line: `code-server --install-extension <extension-id>`
+  - Workaround: Use Open VSX Registry or manually install .vsix files
 
 ## [0.5.0] - 2025-01-16
 
