@@ -1,6 +1,6 @@
 name: "Python Development"
 instance_type: "m7g.medium"
-ami_base: "ubuntu22-arm64"
+ami_base: "ubuntu24-arm64"
 ebs_volume_size: 40
 packages:
   - git

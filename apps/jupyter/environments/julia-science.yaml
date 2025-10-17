@@ -1,6 +1,6 @@
 name: "Julia Scientific Computing"
 instance_type: "m7g.large"
-ami_base: "ubuntu22-arm64"
+ami_base: "ubuntu24-arm64"
 ebs_volume_size: 25
 packages:
   - python3-pip

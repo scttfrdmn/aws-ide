@@ -20,7 +20,7 @@ func TestInstanceStruct(t *testing.T) {
 		IdleTimeout:   "4h",
 		Region:        "us-east-1",
 		SecurityGroup: "sg-123456",
-		AMIBase:       "ubuntu22-arm64",
+		AMIBase:       "ubuntu24-arm64",
 	}
 
 	if instance.ID != "i-1234567890abcdef0" {
@@ -383,7 +383,7 @@ func TestSaveState_RoundTrip(t *testing.T) {
 				TunnelPID:     12345,
 				Region:        "us-west-2",
 				SecurityGroup: "sg-abc",
-				AMIBase:       "ubuntu22-arm64",
+				AMIBase:       "ubuntu24-arm64",
 			},
 			"i-456": {
 				ID:          "i-456",
@@ -422,8 +422,8 @@ func TestSaveState_RoundTrip(t *testing.T) {
 	if inst1.TunnelPID != 12345 {
 		t.Errorf("Expected TunnelPID 12345, got %d", inst1.TunnelPID)
 	}
-	if inst1.AMIBase != "ubuntu22-arm64" {
-		t.Errorf("Expected AMIBase ubuntu22-arm64, got %s", inst1.AMIBase)
+	if inst1.AMIBase != "ubuntu24-arm64" {
+		t.Errorf("Expected AMIBase ubuntu24-arm64, got %s", inst1.AMIBase)
 	}
 	// Time comparison (allow small delta due to serialization)
 	if inst1.LaunchedAt.Sub(now).Abs() > time.Second {
