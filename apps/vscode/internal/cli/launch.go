@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	vscodeconfig "github.com/scttfrdmn/aws-ide/apps/vscode/internal/config"
 	"github.com/scttfrdmn/aws-ide/pkg/aws"
@@ -195,8 +196,8 @@ func executeDryRun(ctx context.Context, env *config.Environment, profile, region
 func executeLaunch(ctx context.Context, env *config.Environment, customAMI, profile, region, availabilityZone string, idleTimeoutSeconds int, connectionMethod, subnetType string, createNatGateway bool) error {
 	fmt.Printf("Launching %s environment on %s...\n", env.Name, env.InstanceType)
 
-	// Setup AWS client and determine region
-	ec2Client, actualRegion, err := setupAWSClient(ctx, profile, region)
+	// Setup AWS clients and determine region
+	ec2Client, ssmClient, actualRegion, err := setupAWSClient(ctx, profile, region)
 	if err != nil {
 		return err
 	}
@@ -235,7 +236,7 @@ func executeLaunch(ctx context.Context, env *config.Environment, customAMI, prof
 	}
 
 	// Launch and wait for instance
-	instance, err := launchAndWaitForInstance(ctx, ec2Client, env, subnet, securityGroup, amiID, userData, keyInfo, instanceProfile)
+	instance, err := launchAndWaitForInstance(ctx, ec2Client, ssmClient, env, subnet, securityGroup, amiID, userData, keyInfo, instanceProfile)
 	if err != nil {
 		return err
 	}
@@ -253,11 +254,11 @@ func determineRegion(ec2Client *aws.EC2Client, regionOverride string) string {
 	return actualRegion
 }
 
-// setupAWSClient creates and configures the AWS EC2 client
-func setupAWSClient(ctx context.Context, profile, region string) (*aws.EC2Client, string, error) {
+// setupAWSClient creates and configures the AWS EC2 and SSM clients
+func setupAWSClient(ctx context.Context, profile, region string) (*aws.EC2Client, *aws.SSMClient, string, error) {
 	ec2Client, err := aws.NewEC2Client(ctx, profile)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to create AWS client: %w", err)
+		return nil, nil, "", fmt.Errorf("failed to create AWS client: %w", err)
 	}
 
 	actualRegion := ec2Client.GetRegion()
@@ -266,7 +267,16 @@ func setupAWSClient(ctx context.Context, profile, region string) (*aws.EC2Client
 		fmt.Printf("Note: Region override (%s) not yet implemented, using profile region (%s)\n", region, actualRegion)
 	}
 
-	return ec2Client, actualRegion, nil
+	// Create SSM client for readiness checks (reuse config loading)
+	cfg, err := awssdkconfig.LoadDefaultConfig(ctx,
+		awssdkconfig.WithSharedConfigProfile(profile),
+	)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("failed to load AWS config for SSM: %w", err)
+	}
+	ssmClient := aws.NewSSMClient(cfg)
+
+	return ec2Client, ssmClient, actualRegion, nil
 }
 
 // setupInstanceProfile configures IAM instance profile with SSM permissions
@@ -424,7 +434,7 @@ func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *co
 }
 
 // launchAndWaitForInstance launches the EC2 instance and waits for it to be running
-func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, subnet *aws.SubnetInfo, securityGroup *aws.SecurityGroupInfo, amiID, userData string, keyInfo *aws.KeyPairInfo, instanceProfile *aws.InstanceProfileInfo) (*types.Instance, error) {
+func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, ssmClient *aws.SSMClient, env *config.Environment, subnet *aws.SubnetInfo, securityGroup *aws.SecurityGroupInfo, amiID, userData string, keyInfo *aws.KeyPairInfo, instanceProfile *aws.InstanceProfileInfo) (*types.Instance, error) {
 	fmt.Printf("🚀 Launching EC2 instance (%s)...\n", env.InstanceType)
 
 	launchParams := aws.LaunchParams{
@@ -471,7 +481,7 @@ func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env
 	progressDone := make(chan bool)
 	go streamSetupProgress(ctx, instance, keyInfo, progressDone)
 
-	if err := waitForVSCodeReady(ctx, instance); err != nil {
+	if err := waitForVSCodeReady(ctx, ssmClient, instance); err != nil {
 		close(progressDone) // Stop progress streaming
 		fmt.Printf("\n⚠️  Warning: %v\n", err)
 		fmt.Println("   You can still try connecting - the service may still be starting up.")
@@ -705,24 +715,16 @@ func streamSetupProgress(ctx context.Context, instance *types.Instance, keyInfo 
 	}
 }
 
-// waitForVSCodeReady polls the VSCode Server until it's ready to accept connections
-func waitForVSCodeReady(ctx context.Context, instance *types.Instance) error {
-	// Determine the host to connect to
-	host := ""
-	if instance.PublicIpAddress != nil {
-		host = *instance.PublicIpAddress
-	} else if instance.PrivateIpAddress != nil {
-		host = *instance.PrivateIpAddress
-	} else {
-		return fmt.Errorf("instance has no IP address")
-	}
+// waitForVSCodeReady polls the VSCode Server until it's ready to accept connections via SSM
+func waitForVSCodeReady(ctx context.Context, ssmClient *aws.SSMClient, instance *types.Instance) error {
+	instanceID := *instance.InstanceId
 
 	// VSCode Server (code-server) runs on port 8080
-	config := readiness.ServiceConfig{
-		Host:    host,
-		Port:    8080,
-		Timeout: 5 * time.Minute, // 5 minutes should be enough for installation
-		Retry:   10 * time.Second, // Check every 10 seconds
+	config := readiness.SSMServiceConfig{
+		InstanceID: instanceID,
+		Port:       8080,
+		Timeout:    5 * time.Minute, // 5 minutes should be enough for installation
+		Retry:      10 * time.Second, // Check every 10 seconds
 	}
 
 	// Track elapsed time for progress updates
@@ -732,13 +734,13 @@ func waitForVSCodeReady(ctx context.Context, instance *types.Instance) error {
 	callback := func(message string, elapsed time.Duration) {
 		// Only print updates every 20 seconds to avoid spam
 		now := time.Now()
-		if now.Sub(lastUpdate) >= 20*time.Second || strings.Contains(message, "ready") {
+		if now.Sub(lastUpdate) >= 20*time.Second || strings.Contains(message, "ready") || strings.Contains(message, "SSM") {
 			fmt.Printf("   [%ds] %s\n", int(elapsed.Seconds()), message)
 			lastUpdate = now
 		}
 	}
 
-	result, err := readiness.PollServiceReadiness(ctx, config, callback)
+	result, err := readiness.PollServiceReadinessViaSSM(ctx, config, ssmClient, callback)
 	if err != nil {
 		return err
 	}
