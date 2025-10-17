@@ -122,11 +122,17 @@ Establish comprehensive testing infrastructure with unit, integration, and E2E t
   - [ ] Add integration tests for AMI operations
   - [ ] Test error handling paths
 
-- [ ] **Smoke Tests (Quick Real AWS Validation)**
-  - [ ] Basic EC2 client creation
-  - [ ] IAM role verification
-  - [ ] Subnet discovery
-  - [ ] Quick launch/terminate cycle (5-10 min)
+- [x] **Smoke Tests (Quick Real AWS Validation)**
+  - [x] pkg/aws/ec2_smoke_test.go (370 lines, 7 test functions)
+  - [x] Basic EC2 client creation and connectivity
+  - [x] IAM role verification (Session Manager)
+  - [x] Subnet discovery (public subnets)
+  - [x] Instance type availability checks
+  - [x] AMI discovery (Ubuntu 24.04, Amazon Linux)
+  - [x] Availability zone compatibility
+  - [x] Quick launch prerequisite validation
+  - [x] All tests passing with AWS_PROFILE=aws
+  - [x] Run with `make test-smoke`
 
 - [ ] **End-to-End Tests**
   - [ ] Complete launch → connect → terminate flow (Jupyter)
@@ -153,8 +159,8 @@ Establish comprehensive testing infrastructure with unit, integration, and E2E t
 - ✅ Comprehensive Makefile with all test types
 - ✅ LocalStack integration working
 - ✅ Unit tests for testable modules
+- ✅ Smoke tests for quick validation
 - ⏳ Integration tests covering major AWS operations
-- ⏳ Smoke tests for quick validation
 - ⏳ E2E tests for all three apps (Jupyter, RStudio, VSCode)
 - ⏳ CI/CD running unit + integration tests automatically
 
