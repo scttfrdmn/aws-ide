@@ -115,7 +115,7 @@ func runDeleteAllAMIs(region string) error {
 	fmt.Printf("Type 'yes' to confirm: ")
 
 	var confirmation string
-	fmt.Scanln(&confirmation)
+	_, _ = fmt.Scanln(&confirmation)
 
 	if confirmation != "yes" {
 		fmt.Println("Deletion cancelled")
@@ -174,6 +174,6 @@ func cleanupStateFile(deletedAMIs []aws.AMIInfo) {
 	}
 
 	if modified {
-		state.Save()
+		_ = state.Save()
 	}
 }

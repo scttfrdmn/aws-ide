@@ -99,7 +99,7 @@ func checkHTTPService(host string, port int, timeout time.Duration) (bool, error
 	if err != nil {
 		return false, err
 	}
-	conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Port is open, now try HTTP request
 	client := &http.Client{
@@ -112,7 +112,7 @@ func checkHTTPService(host string, port int, timeout time.Duration) (bool, error
 		// Port is open but HTTP not responding yet
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read a bit of the response to ensure service is actually working
 	// (not just accepting connections)

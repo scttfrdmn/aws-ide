@@ -256,9 +256,6 @@ func TestCommandResult_EdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Just verify the struct can hold these values
-			if tt.result.CommandID == "" && tt.name != "empty strings" {
-				// OK
-			}
 			t.Logf("Test %s passed with output length: %d", tt.name, len(tt.result.Output))
 		})
 	}
