@@ -94,7 +94,7 @@ func PollServiceReadiness(ctx context.Context, config ServiceConfig, callback Pr
 // checkHTTPService attempts to connect to an HTTP service and verify it's responding
 func checkHTTPService(host string, port int, timeout time.Duration) (bool, error) {
 	// First check if port is open (faster than HTTP request)
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.DialTimeout("tcp", address, timeout)
 	if err != nil {
 		return false, err
