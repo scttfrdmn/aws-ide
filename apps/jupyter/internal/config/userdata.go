@@ -29,17 +29,28 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("exec > >(tee /var/log/user-data.log)\n")
 	sb.WriteString("exec 2>&1\n\n")
 
-	sb.WriteString("echo 'Starting aws-jupyter environment setup'\n")
+	// Create progress log file
+	sb.WriteString("# Setup progress tracking\n")
+	sb.WriteString("PROGRESS_LOG=\"/var/log/setup-progress.log\"\n")
+	sb.WriteString("touch $PROGRESS_LOG\n")
+	sb.WriteString("chmod 644 $PROGRESS_LOG\n\n")
+
+	sb.WriteString("log_progress() {\n")
+	sb.WriteString("  echo \"STEP:$1\" | tee -a $PROGRESS_LOG\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("log_progress 'Starting aws-jupyter environment setup'\n")
 	sb.WriteString("echo 'Environment: " + env.Name + "'\n\n")
 
 	// Update system
 	sb.WriteString("# Update system packages\n")
+	sb.WriteString("log_progress 'Updating system packages'\n")
 	sb.WriteString("apt-get update -y\n")
 	sb.WriteString("apt-get upgrade -y\n\n")
 
 	// Install SSM Agent
 	sb.WriteString("# Install AWS Systems Manager Agent\n")
-	sb.WriteString("echo 'Installing SSM Agent...'\n")
+	sb.WriteString("log_progress 'Installing SSM Agent'\n")
 	sb.WriteString("snap install amazon-ssm-agent --classic\n")
 	sb.WriteString("systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service\n")
 	sb.WriteString("systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service\n\n")
@@ -47,7 +58,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install system packages
 	if len(env.Packages) > 0 {
 		sb.WriteString("# Install system packages\n")
-		sb.WriteString("echo 'Installing system packages...'\n")
+		sb.WriteString("log_progress 'Installing system packages'\n")
 		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get install -y \\\n")
 		for i, pkg := range env.Packages {
 			if i == len(env.Packages)-1 {
@@ -65,7 +76,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install Python packages
 	if len(env.PipPackages) > 0 {
 		sb.WriteString("# Install Python packages\n")
-		sb.WriteString("echo 'Installing Python packages...'\n")
+		sb.WriteString("log_progress 'Installing Python packages'\n")
 		sb.WriteString("python3 -m pip install \\\n")
 		for i, pkg := range env.PipPackages {
 			if i == len(env.PipPackages)-1 {
@@ -79,7 +90,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install R packages if any
 	if len(env.RPackages) > 0 {
 		sb.WriteString("# Install R packages\n")
-		sb.WriteString("echo 'Installing R packages...'\n")
+		sb.WriteString("log_progress 'Installing R packages'\n")
 		sb.WriteString("R -e \"install.packages(c(")
 		for i, pkg := range env.RPackages {
 			if i > 0 {
@@ -106,7 +117,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install Julia and packages if any
 	if len(env.JuliaPackages) > 0 {
 		sb.WriteString("# Install Julia\n")
-		sb.WriteString("echo 'Installing Julia...'\n")
+		sb.WriteString("log_progress 'Installing Julia'\n")
 		sb.WriteString("wget -q https://julialang-s3.julialang.org/bin/linux/aarch64/1.10/julia-1.10.5-linux-aarch64.tar.gz -O /tmp/julia.tar.gz\n")
 		sb.WriteString("tar -xzf /tmp/julia.tar.gz -C /opt/\n")
 		sb.WriteString("ln -s /opt/julia-1.10.5/bin/julia /usr/local/bin/julia\n")
@@ -188,6 +199,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 
 	// Enable and start Jupyter service
 	sb.WriteString("# Enable and start Jupyter\n")
+	sb.WriteString("log_progress 'Starting Jupyter Lab service'\n")
 	sb.WriteString("systemctl daemon-reload\n")
 	sb.WriteString("systemctl enable jupyter.service\n")
 	sb.WriteString("systemctl start jupyter.service\n\n")
@@ -217,6 +229,8 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("echo 'Idle detection system installed and enabled'\n\n")
 
 	// Final status
+	sb.WriteString("log_progress 'Setup complete - Jupyter Lab is ready'\n")
+	sb.WriteString("echo 'COMPLETE' >> $PROGRESS_LOG\n")
 	sb.WriteString("echo 'aws-jupyter environment setup complete!'\n")
 	sb.WriteString("echo 'Jupyter Lab is running on port 8888'\n")
 	sb.WriteString("echo 'Use Session Manager or SSH tunnel to connect'\n")
