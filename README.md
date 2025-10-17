@@ -8,6 +8,7 @@ AWS IDE is a monorepo containing multiple CLI tools for managing different cloud
 
 - **[aws-jupyter](apps/jupyter/)** - Launch and manage Jupyter Lab instances
 - **[aws-rstudio](apps/rstudio/)** - Launch and manage RStudio Server instances
+- **[aws-vscode](apps/vscode/)** - Launch and manage VSCode Server (code-server) instances
 
 ## Key Features
 
@@ -53,6 +54,11 @@ sudo mv aws-jupyter /usr/local/bin/
 cd ../rstudio
 go build -o aws-rstudio ./cmd/aws-rstudio
 sudo mv aws-rstudio /usr/local/bin/
+
+# Build VSCode launcher
+cd ../vscode
+go build -o aws-vscode ./cmd/aws-vscode
+sudo mv aws-vscode /usr/local/bin/
 ```
 
 ### Launch Your First Instance
@@ -63,6 +69,9 @@ aws-jupyter launch
 
 # Launch RStudio Server
 aws-rstudio launch
+
+# Launch VSCode Server
+aws-vscode launch
 
 # Launch with Session Manager (no SSH)
 aws-jupyter launch --connection session-manager
@@ -93,6 +102,16 @@ RStudio Server launcher with:
 
 [Read the full RStudio documentation →](apps/rstudio/README.md)
 
+### [AWS VSCode](apps/vscode/)
+
+VSCode Server (code-server) launcher with:
+- 4 built-in environments (web-dev, python-dev, go-dev, fullstack)
+- Automatic extension installation
+- Full browser-based VSCode experience
+- Language runtime setup (Node.js, Python, Go)
+
+[Read the full VSCode documentation →](apps/vscode/README.md)
+
 ## Architecture
 
 This project is organized as a Go workspace with shared infrastructure:
@@ -109,10 +128,14 @@ aws-ide/
 │   │   ├── internal/      # App-specific code
 │   │   ├── docs/          # Jupyter-specific documentation
 │   │   └── environments/  # Built-in Jupyter environments
-│   └── rstudio/           # RStudio Server launcher
+│   ├── rstudio/           # RStudio Server launcher
+│   │   ├── cmd/           # Entry point
+│   │   ├── internal/      # App-specific code
+│   │   └── environments/  # Built-in RStudio environments
+│   └── vscode/            # VSCode Server launcher
 │       ├── cmd/           # Entry point
 │       ├── internal/      # App-specific code
-│       └── environments/  # Built-in RStudio environments
+│       └── environments/  # Built-in VSCode environments
 └── go.work                # Go workspace configuration
 ```
 
@@ -150,11 +173,13 @@ See the [Jupyter AWS Authentication Guide](apps/jupyter/docs/AWS_AUTHENTICATION.
 # Build all applications
 cd apps/jupyter && go build ./cmd/aws-jupyter
 cd ../rstudio && go build ./cmd/aws-rstudio
+cd ../vscode && go build ./cmd/aws-vscode
 
 # Run tests
 cd ../../pkg && go test ./...
 cd ../apps/jupyter && go test ./...
 cd ../apps/rstudio && go test ./...
+cd ../apps/vscode && go test ./...
 ```
 
 ### Running Tests
@@ -171,6 +196,10 @@ go test -v ./...
 # Test RStudio
 cd apps/rstudio
 go test -v ./...
+
+# Test VSCode
+cd ../vscode
+go test -v ./...
 ```
 
 ### Contributing
@@ -183,12 +212,15 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - **v0.1.0-v0.4.0**: Core Jupyter features, Session Manager, cost optimization
 - **Monorepo Migration**: Shared infrastructure for multiple IDE types
 
-### 🚀 Planned
-- **v0.5.0** (Q1 2025): UX enhancements (interactive wizard, colors)
-- **v0.6.0** (Q1 2025): Integration testing (40%+ coverage)
-- **v0.7.0-v1.0.0**: Multi-instance ops, backups, enterprise features
+### 🚀 In Progress
+- **aws-vscode**: VSCode Server implementation (alpha)
+
+### 📋 Planned
+- **v0.6.0** (Q1 2025): Complete aws-vscode launch command, UX enhancements
+- **v0.7.0** (Q1 2025): Integration testing (40%+ coverage)
+- **v0.8.0-v1.0.0**: Multi-instance ops, backups, enterprise features
 - **RStudio Feature Parity**: Port all Jupyter features to RStudio
-- **Additional IDEs**: VSCode Server, JupyterHub, etc.
+- **Additional IDEs**: Theia, Apache Zeppelin, Streamlit, etc.
 
 See [ROADMAP.md](ROADMAP.md) for detailed planning.
 

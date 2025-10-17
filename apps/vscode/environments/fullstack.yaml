@@ -1,0 +1,33 @@
+name: "Fullstack Development"
+instance_type: "m7g.large"
+ami_base: "ubuntu24-arm64"
+ebs_volume_size: 50
+packages:
+  - git
+  - curl
+  - wget
+  - build-essential
+  - htop
+  - awscli
+  - python3-pip
+  - python3-venv
+  - python3-dev
+  - postgresql-client
+  - redis-tools
+pip_packages:
+  - django
+  - fastapi
+  - uvicorn
+  - sqlalchemy
+  - psycopg2-binary
+  - redis
+  - celery
+  - black
+  - pytest
+environment_vars:
+  NODEJS_VERSION: "20"
+  PYTHON_VERSION: "3"
+  NPM_PACKAGES: "typescript eslint prettier pm2"
+  VSCODE_EXTENSIONS: "ms-python.python,dbaeumer.vscode-eslint,esbenp.prettier-vscode,ms-azuretools.vscode-docker,bradlc.vscode-tailwindcss,ms-python.vscode-pylance"
+  NODE_ENV: "development"
+  PYTHONPATH: "/home/ubuntu/workspace"

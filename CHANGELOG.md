@@ -8,11 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **aws-vscode**: New VSCode Server (code-server) CLI tool (alpha)
+  - Complete CLI structure with all subcommands (launch, list, connect, stop, start, terminate, status, env, key)
+  - User-data script generator for automatic code-server setup
+  - 4 built-in environments: web-dev (default), python-dev, go-dev, fullstack
+  - Automatic language runtime installation (Node.js 20, Python 3, Go 1.22)
+  - VSCode extension auto-installation system
+  - Ubuntu 24.04 Noble LTS base OS
+  - Idle detection and auto-stop system
+  - SSH tunnel and Session Manager port forwarding support
+  - Comprehensive README with quick start and troubleshooting
+  - Launch command structure defined (full implementation in progress)
+- Added apps/vscode to Go workspace
 - Comprehensive test suite for pkg/config module (84.7% coverage)
   - environment_test.go: Environment loading, validation, listing with 7 test functions
   - state_test.go: State management, save/load cycles with 11 test functions
   - keys_test.go: SSH key storage, permissions, cleanup with 29 test functions
   - All tests use isolated temp directories with proper cleanup
+
+### Changed
+- Updated root README to include aws-vscode
+- Updated project roadmap to reflect aws-vscode alpha status
 
 ### Fixed
 - golangci-lint errcheck violations in pkg/cli/delete-ami.go

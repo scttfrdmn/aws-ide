@@ -1,0 +1,15 @@
+name: "Go Development"
+instance_type: "m7g.medium"
+ami_base: "ubuntu24-arm64"
+ebs_volume_size: 30
+packages:
+  - git
+  - curl
+  - wget
+  - build-essential
+  - htop
+  - awscli
+environment_vars:
+  GO_VERSION: "1.22.0"
+  VSCODE_EXTENSIONS: "golang.go,golang.go-nightly"
+  GOPATH: "/home/ubuntu/go"
