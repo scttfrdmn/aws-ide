@@ -1,113 +1,116 @@
-# aws-jupyter Roadmap
+# AWS IDE Roadmap
 
-This document outlines the future development plans for aws-jupyter. The project follows semantic versioning and is organized into phases.
+This document outlines the future development plans for the AWS IDE project. The project follows semantic versioning and is organized into phases.
 
-## 📊 Current Status: v0.2.0 (In Progress)
+## 📊 Current Status: Monorepo Established
 
-**Completed Phases:**
-- ✅ Phase 1: Code Quality & Refactoring (Complexity reduction, documentation, linting)
-- ✅ Phase 2: Code Improvements (Constants extraction, unused code cleanup)
-- ✅ Phase 3: Feature Completion (All CLI commands implemented)
-- ✅ Phase 4: Test Coverage (AWS package tests, 33% coverage improvement)
+**Project Evolution:**
+- ✅ **v0.1.0-v0.4.0**: aws-jupyter (single app) - Feature complete
+- ✅ **Monorepo Migration**: Transformed into multi-IDE platform (January 2025)
+- 🚀 **Current Focus**: RStudio feature parity and shared infrastructure improvements
 
-**Current Coverage:**
-- Overall: 18.7%
-- CLI: 27.8%
-- Config: 19.1%
-- AWS: 3.8%
+**Monorepo Structure:**
+- `pkg/` - Shared AWS infrastructure library
+- `apps/jupyter/` - Jupyter Lab launcher (feature complete)
+- `apps/rstudio/` - RStudio Server launcher (basic implementation)
+
+**Coverage Status:**
+- pkg: Tests passing (aws package tested)
+- apps/jupyter: 27.8% CLI, all tests passing
+- apps/rstudio: No tests yet (needs development)
 
 ---
 
-## 🎯 v0.2.0 - Documentation & Release (Current)
+## 🎯 v0.5.0 - Monorepo Stabilization (Current - Q1 2025)
 
 **Status:** In Progress
-**Target Date:** January 2025
+**Target Date:** February 2025
 **Priority:** CRITICAL
 
 ### Goals
-Complete documentation and prepare for official release of all Phase 1-4 improvements.
+Complete the monorepo migration and establish RStudio as a first-class citizen alongside Jupyter.
 
 ### Tasks
-- [ ] Update README.md
-  - [ ] Remove "UNDER ACTIVE DEVELOPMENT" warning
-  - [ ] Add examples for all 10 commands
-  - [ ] Document Session Manager setup
-  - [ ] Add troubleshooting section
-  - [ ] Update feature list with new commands
 
-- [ ] Create Documentation
-  - [ ] `docs/SESSION_MANAGER_SETUP.md` - Complete SSM setup guide
-  - [ ] `docs/PRIVATE_SUBNET_GUIDE.md` - Private subnet best practices
-  - [ ] `docs/TROUBLESHOOTING.md` - Common issues and solutions
-  - [ ] `docs/EXAMPLES.md` - Real-world usage scenarios
+**Completed:**
+- [x] Transform codebase into Go workspace
+- [x] Extract shared infrastructure into pkg/
+- [x] Create apps/jupyter with full feature set
+- [x] Create apps/rstudio with basic implementation
+- [x] Fix all test failures
+- [x] Update CI/CD for monorepo structure
+- [x] Remove legacy code and duplication
+- [x] Update documentation for monorepo
 
-- [ ] Update CHANGELOG.md
-  - [ ] Document Phase 1-4 improvements
-  - [ ] Add all new commands (stop, terminate, status, connect)
-  - [ ] Document test coverage improvements
-  - [ ] Document Session Manager support
+**In Progress:**
+- [ ] RStudio Feature Parity
+  - [ ] Port all 10 Jupyter commands to RStudio
+  - [ ] Create R-specific environments (tidyverse, bioconductor, etc.)
+  - [ ] Add RStudio-specific user data scripts
+  - [ ] Document RStudio-specific features
 
-- [ ] Release Preparation
-  - [ ] Test GoReleaser workflow locally
-  - [ ] Create v0.2.0 tag
-  - [ ] Generate release notes
-  - [ ] Test binaries on multiple platforms
+- [ ] Shared Infrastructure Testing
+  - [ ] Add tests for pkg/cli utilities
+  - [ ] Add tests for pkg/config modules
+  - [ ] Target 40%+ coverage for pkg/
+
+- [ ] Documentation
+  - [ ] Complete RStudio README
+  - [ ] Update CHANGELOG for monorepo
+  - [ ] Create migration guide for users
 
 ### Success Criteria
-- ✅ Complete documentation for all features
-- ✅ Clear setup instructions for Session Manager
-- ✅ v0.2.0 released on GitHub
-- ✅ Binaries available for Linux/macOS/Windows
+- ✅ Both apps build and test successfully
+- ✅ CI/CD pipeline working for monorepo
+- ⏳ RStudio has feature parity with Jupyter
+- ⏳ Shared library well-tested (40%+ coverage)
+- ⏳ Complete documentation for both apps
 
 ---
 
-## 🧪 v0.3.0 - Integration Testing & Reliability
+## 🧪 v0.6.0 - Testing & Quality (Q1 2025)
 
 **Status:** Planned
-**Target Date:** Q1 2025
+**Target Date:** March 2025
 **Priority:** HIGH
 
 ### Goals
-Improve test coverage to 40-50% and add integration testing infrastructure.
+Improve test coverage across all modules and add integration testing.
 
 ### Tasks
 - [ ] Integration Testing Infrastructure
   - [ ] Add localstack support for AWS API mocking
   - [ ] Configure moto for EC2/IAM/SSM mocking
-  - [ ] Create integration test suite
+  - [ ] Create integration test suite for both apps
   - [ ] Add GitHub Actions integration test workflow
 
 - [ ] Expand Unit Test Coverage
-  - [ ] AWS package: 3.8% → 20% (add API call mocks)
-  - [ ] CLI package: 27.8% → 40% (add edge cases)
-  - [ ] Config package: 19.1% → 30% (add validation tests)
-  - [ ] Overall: 18.7% → 40%
+  - [ ] pkg/aws: 3.8% → 40%
+  - [ ] pkg/cli: 0% → 40%
+  - [ ] pkg/config: 0% → 40%
+  - [ ] apps/jupyter/cli: 27.8% → 50%
+  - [ ] apps/rstudio/cli: 0% → 40%
+  - [ ] Overall: 18.7% → 45%
 
 - [ ] End-to-End Tests
   - [ ] Test complete launch → connect → terminate flow
-  - [ ] Test SSH connection method
-  - [ ] Test Session Manager connection method
+  - [ ] Test SSH vs Session Manager
   - [ ] Test private subnet with NAT gateway
-  - [ ] Test dry-run mode thoroughly
-
-- [ ] Error Path Testing
-  - [ ] Test AWS API failures
-  - [ ] Test network failures
-  - [ ] Test invalid user input
-  - [ ] Test cleanup on failure
+  - [ ] Test environment generation
+  - [ ] Verify both Jupyter and RStudio work identically
 
 ### Success Criteria
-- ✅ 40%+ overall test coverage
+- ✅ 45%+ overall test coverage
 - ✅ Integration tests passing in CI
-- ✅ All major error paths tested
-- ✅ Mocked AWS environment working
+- ✅ E2E tests for critical workflows
+- ✅ Both apps thoroughly tested
 
 ---
 
-## ✨ v0.4.0 - User Experience Enhancements
+## ✨ v0.7.0 - User Experience (Q2 2025)
 
 **Status:** Planned
-**Target Date:** Q1 2025
+**Target Date:** April 2025
 **Priority:** MEDIUM
 
 ### Goals
@@ -118,7 +121,7 @@ Improve usability and developer experience with better UI/UX.
   - [ ] Guide users through launch options
   - [ ] Provide recommendations based on use case
   - [ ] Show cost estimates
-  - [ ] Validate inputs interactively
+  - [ ] Support both Jupyter and RStudio
 
 - [ ] Enhanced Output
   - [ ] Add color-coded output (success/warning/error)
@@ -129,33 +132,27 @@ Improve usability and developer experience with better UI/UX.
 - [ ] Better Error Messages
   - [ ] Contextual error messages
   - [ ] Suggest fixes for common errors
-  - [ ] Add error codes for documentation lookup
+  - [ ] Add error codes for documentation
   - [ ] Include AWS error details when relevant
 
-- [ ] Shell Completion Improvements
-  - [ ] Tab completion for instance IDs
-  - [ ] Tab completion for environment names
-  - [ ] Tab completion for regions
-  - [ ] Smart suggestions based on context
-
 - [ ] Configuration File Support
-  - [ ] `~/.aws-jupyter/config.yaml` for defaults
+  - [ ] `~/.aws-ide/config.yaml` for defaults
   - [ ] Profile support (dev, prod, etc.)
-  - [ ] Override CLI flags with config
+  - [ ] Per-app configuration sections
   - [ ] Validate configuration on load
 
 ### Success Criteria
 - ✅ Interactive wizard working
 - ✅ Color output on supported terminals
 - ✅ Error messages provide actionable guidance
-- ✅ Shell completion for all resources
+- ✅ Unified configuration system
 
 ---
 
-## 💰 v0.5.0 - Cost Management & Monitoring
+## 💰 v0.8.0 - Cost Management (Q2 2025)
 
 **Status:** Planned
-**Target Date:** Q2 2025
+**Target Date:** May 2025
 **Priority:** MEDIUM
 
 ### Goals
@@ -167,40 +164,33 @@ Add cost tracking, monitoring, and optimization features.
   - [ ] Calculate estimated costs per instance
   - [ ] Show cumulative costs in `list` command
   - [ ] Export cost reports (CSV/JSON)
-  - [ ] Cost breakdown by resource type
+  - [ ] Support both Jupyter and RStudio instances
 
 - [ ] Cost Optimization
   - [ ] Recommend cheaper instance types
-  - [ ] Detect idle instances
-  - [ ] Auto-stop after idle timeout
-  - [ ] Suggest Spot instances for appropriate workloads
+  - [ ] Enhanced idle detection (already started)
+  - [ ] Auto-stop improvements
+  - [ ] Suggest Spot instances
   - [ ] Cost estimation in dry-run mode
 
-- [ ] Monitoring
+- [ ] Monitoring Dashboard
   - [ ] Instance health checks
-  - [ ] Jupyter Lab availability monitoring
   - [ ] Resource utilization tracking (CPU, memory)
   - [ ] Alert on unexpected costs
-  - [ ] Dashboard view of all instances
-
-- [ ] Budgets & Limits
-  - [ ] Set spending limits
-  - [ ] Alert when approaching limit
-  - [ ] Auto-terminate on budget exceeded
-  - [ ] Monthly/weekly cost summaries
+  - [ ] Unified dashboard for all IDE types
 
 ### Success Criteria
 - ✅ Accurate cost tracking per instance
 - ✅ Cost optimization recommendations
 - ✅ Monitoring dashboard functional
-- ✅ Budget enforcement working
+- ✅ Works for all IDE types
 
 ---
 
-## 🔄 v0.6.0 - Multi-Instance Management
+## 🔄 v0.9.0 - Multi-Instance Management (Q3 2025)
 
 **Status:** Planned
-**Target Date:** Q2 2025
+**Target Date:** July 2025
 **Priority:** MEDIUM
 
 ### Goals
@@ -208,10 +198,10 @@ Improve management of multiple instances and add batch operations.
 
 ### Tasks
 - [ ] Batch Operations
-  - [ ] `aws-jupyter stop --all` - Stop all instances
-  - [ ] `aws-jupyter stop --tag env=test` - Stop by tag
-  - [ ] `aws-jupyter terminate --pattern "jupyter-*"` - Pattern matching
-  - [ ] `aws-jupyter connect --latest` - Connect to most recent
+  - [ ] Stop/start/terminate multiple instances
+  - [ ] Filter by IDE type, environment, tags
+  - [ ] Pattern matching for instance selection
+  - [ ] Bulk operations with confirmation
 
 - [ ] Instance Groups
   - [ ] Group instances by project/team
@@ -220,72 +210,59 @@ Improve management of multiple instances and add batch operations.
   - [ ] Group-level policies
 
 - [ ] Enhanced List Command
-  - [ ] Filter by state (running, stopped)
-  - [ ] Filter by environment
-  - [ ] Filter by age
+  - [ ] Filter by IDE type (jupyter, rstudio, etc.)
+  - [ ] Filter by state, environment, age
   - [ ] Sort options (cost, uptime, name)
   - [ ] Export to JSON/CSV
 
-- [ ] Instance Templates
-  - [ ] Save launch configurations as templates
-  - [ ] Share templates across team
-  - [ ] Template versioning
-  - [ ] Template marketplace
-
 ### Success Criteria
 - ✅ Batch operations working reliably
-- ✅ Filtering and sorting in list command
-- ✅ Template system functional
+- ✅ Filtering and sorting feature-rich
 - ✅ Multi-instance management efficient
+- ✅ Works across all IDE types
 
 ---
 
-## 💾 v0.7.0 - Backup & Restore
+## 🆕 v0.10.0 - Additional IDEs (Q3 2025)
 
 **Status:** Planned
-**Target Date:** Q3 2025
+**Target Date:** September 2025
 **Priority:** LOW-MEDIUM
 
 ### Goals
-Add snapshot and backup capabilities for instance state preservation.
+Add support for additional cloud-based IDE types.
 
 ### Tasks
-- [ ] Instance Snapshots
-  - [ ] Create EBS snapshots
-  - [ ] Snapshot scheduling
-  - [ ] Snapshot naming and tagging
-  - [ ] List and manage snapshots
+- [ ] VSCode Server
+  - [ ] Create apps/vscode with basic implementation
+  - [ ] Port core features from Jupyter/RStudio
+  - [ ] VSCode-specific environments
+  - [ ] Extension management support
 
-- [ ] Backup & Restore
-  - [ ] Backup instance configuration
-  - [ ] Backup Jupyter notebooks
-  - [ ] Restore from snapshot
-  - [ ] Incremental backups
+- [ ] JupyterHub (Multi-user)
+  - [ ] Create apps/jupyterhub
+  - [ ] Multi-user authentication
+  - [ ] User management
+  - [ ] Resource quotas
 
-- [ ] AMI Management
-  - [ ] Create custom AMIs from instances
-  - [ ] Share AMIs across regions
-  - [ ] AMI versioning
-  - [ ] Launch from custom AMI
-
-- [ ] Data Persistence
-  - [ ] Attach persistent EBS volumes
-  - [ ] Sync notebooks to S3
-  - [ ] Automatic backup on terminate
-  - [ ] Restore data to new instance
+- [ ] Additional Candidates
+  - [ ] Theia IDE
+  - [ ] Code-server alternatives
+  - [ ] Zeppelin notebooks
+  - [ ] Custom IDE support framework
 
 ### Success Criteria
-- ✅ Snapshot creation and restoration working
-- ✅ Custom AMI workflow functional
-- ✅ Data persistence across instance lifecycle
-- ✅ Automated backup schedules
+- ✅ At least 2 additional IDE types supported
+- ✅ All core features work across all IDE types
+- ✅ Documentation for each IDE type
+- ✅ Unified CLI experience
 
 ---
 
-## 🏢 v0.8.0 - Enterprise Features
+## 🏢 v0.11.0 - Enterprise Features (Q4 2025)
 
 **Status:** Planned
-**Target Date:** Q3 2025
+**Target Date:** November 2025
 **Priority:** LOW
 
 ### Goals
@@ -296,7 +273,6 @@ Add features for enterprise/team usage.
   - [ ] Switch between AWS accounts
   - [ ] Cross-account resource access
   - [ ] Organization-wide policies
-  - [ ] Consolidated billing view
 
 - [ ] Team Collaboration
   - [ ] Share instances with team members
@@ -306,70 +282,21 @@ Add features for enterprise/team usage.
 
 - [ ] Compliance & Security
   - [ ] Encryption at rest (EBS)
-  - [ ] Encryption in transit
   - [ ] Compliance reporting
   - [ ] Security scanning
-
-- [ ] Advanced Networking
-  - [ ] VPC peering
-  - [ ] Transit Gateway support
-  - [ ] Direct Connect integration
-  - [ ] Custom DNS configuration
+  - [ ] SOC2/HIPAA considerations
 
 ### Success Criteria
 - ✅ Multi-account management working
 - ✅ Team features functional
 - ✅ Compliance requirements met
-- ✅ Advanced networking options available
 
 ---
 
-## 🔌 v0.9.0 - Extensibility & Integrations
+## 🚀 v1.0.0 - Production Ready (Q4 2025)
 
 **Status:** Planned
-**Target Date:** Q4 2025
-**Priority:** LOW
-
-### Goals
-Add plugin system and integrations with other tools.
-
-### Tasks
-- [ ] Plugin System
-  - [ ] Plugin API specification
-  - [ ] Plugin discovery and loading
-  - [ ] Plugin marketplace
-  - [ ] Example plugins
-
-- [ ] IDE Integrations
-  - [ ] VS Code extension
-  - [ ] JetBrains plugin
-  - [ ] Vim/Neovim integration
-  - [ ] Jupyter Lab extension
-
-- [ ] CI/CD Integration
-  - [ ] GitHub Actions integration
-  - [ ] GitLab CI support
-  - [ ] Jenkins plugin
-  - [ ] Terraform provider
-
-- [ ] Third-Party Services
-  - [ ] Slack notifications
-  - [ ] PagerDuty integration
-  - [ ] Datadog monitoring
-  - [ ] CloudWatch Logs integration
-
-### Success Criteria
-- ✅ Plugin system working
-- ✅ At least 2 IDE integrations
-- ✅ CI/CD integration examples
-- ✅ Major service integrations functional
-
----
-
-## 🚀 v1.0.0 - Production Ready
-
-**Status:** Planned
-**Target Date:** Q4 2025
+**Target Date:** December 2025
 **Priority:** HIGH
 
 ### Goals
@@ -377,22 +304,22 @@ Achieve production-grade stability and completeness.
 
 ### Requirements for v1.0.0
 - [ ] **Test Coverage:** 60%+ overall coverage
-- [ ] **Documentation:** Complete and up-to-date
+- [ ] **Documentation:** Complete and up-to-date for all IDEs
 - [ ] **Performance:** <2s command response time
 - [ ] **Stability:** No critical bugs in issue tracker
 - [ ] **Security:** Security audit completed
 - [ ] **Compatibility:** Tested on Linux/macOS/Windows
+- [ ] **IDE Support:** 3+ IDE types fully supported
 - [ ] **User Base:** 100+ active users
 - [ ] **Feedback:** Incorporate feedback from beta users
 
 ### Final Polish
 - [ ] Performance optimization
 - [ ] Memory usage optimization
-- [ ] Startup time optimization
 - [ ] Binary size optimization
 - [ ] Comprehensive benchmarking
 - [ ] Professional branding/logo
-- [ ] Video tutorials
+- [ ] Video tutorials for each IDE type
 - [ ] Migration guides
 
 ### Success Criteria
@@ -407,34 +334,36 @@ Achieve production-grade stability and completeness.
 
 Features under consideration but not yet scheduled:
 
-### Performance
-- [ ] Parallel AWS API calls for faster operations
-- [ ] Caching for frequently accessed data
-- [ ] Connection pooling
-- [ ] Lazy loading of resources
+### Additional IDE Support
+- [ ] PyCharm Server
+- [ ] IntelliJ IDEA Server
+- [ ] RStudio Connect
+- [ ] Observable Framework
+- [ ] Quarto publishing platform
 
-### Additional Features
+### Advanced Features
 - [ ] GPU instance support
 - [ ] Auto-scaling based on load
 - [ ] Kubernetes deployment option
 - [ ] Container-based environments
-- [ ] JupyterHub multi-user support
-- [ ] RStudio Server option
-- [ ] VSCode Server option
+- [ ] Spot instance support
+- [ ] Reserved instance recommendations
 
 ### Integrations
-- [ ] Git integration for notebooks
+- [ ] Git integration for version control
 - [ ] Database connection management
 - [ ] S3 data sync
 - [ ] Secrets management (AWS Secrets Manager)
 - [ ] Parameter Store integration
+- [ ] GitHub Codespaces-like experience
 
 ### Developer Tools
-- [ ] Debug mode with verbose logging
-- [ ] API client library
+- [ ] Plugin system for extensibility
 - [ ] REST API server
-- [ ] Web UI dashboard
+- [ ] Web UI dashboard (unified across IDEs)
 - [ ] Mobile app (iOS/Android)
+- [ ] VS Code extension
+- [ ] Terraform provider
 
 ---
 
@@ -448,8 +377,9 @@ We welcome contributions! Here's how to get involved:
 4. **Join discussions** - Participate in feature planning
 
 ### Priority Areas for Contributions
-- Integration testing infrastructure (v0.3.0)
-- User experience improvements (v0.4.0)
+- RStudio feature parity (v0.5.0)
+- Testing infrastructure (v0.6.0)
+- Additional IDE support (v0.10.0)
 - Documentation and examples
 - Bug fixes and performance improvements
 
@@ -471,9 +401,9 @@ We welcome contributions! Here's how to get involved:
 ## 📊 Metrics & Goals
 
 ### Project Health Metrics
-- Test Coverage: Target 60% by v1.0.0
+- Test Coverage: Target 60% by v1.0.0 (currently 18.7%)
 - Response Time: <2s for all commands
-- Binary Size: <50MB for all platforms
+- Binary Size: <50MB for all platforms (currently ~44MB)
 - Memory Usage: <100MB for typical operations
 - Startup Time: <100ms
 
@@ -482,6 +412,13 @@ We welcome contributions! Here's how to get involved:
 - GitHub Stars: 500+ by v1.0.0
 - Contributors: 10+ by v1.0.0
 - Issues Resolved: 90%+ within 30 days
+- IDE Types Supported: 3+ by v1.0.0
+
+### Monorepo Health
+- Shared library stability: No breaking changes
+- Cross-IDE compatibility: All features work identically
+- Documentation coverage: 100% of features documented
+- CI/CD reliability: 99%+ green builds
 
 ---
 
@@ -493,25 +430,33 @@ We follow [Semantic Versioning 2.0.0](https://semver.org/):
 - **MINOR** version when adding functionality in a backward compatible manner
 - **PATCH** version when making backward compatible bug fixes
 
+**Special Considerations for Monorepo:**
+- Version numbers apply to the entire project (all apps share version)
+- Breaking changes in pkg/ trigger major version bump
+- New IDE support triggers minor version bump
+- Bug fixes in any app trigger patch version bump
+
 ---
 
 ## 📝 Last Updated
 
 - **Date:** January 2025
-- **Version:** v0.2.0 (In Progress)
+- **Version:** v0.5.0 (Monorepo Migration - In Progress)
 - **Next Review:** February 2025
+- **Project Status:** Transitioning from single app to multi-IDE platform
 
 ---
 
 ## 💬 Feedback
 
 Have suggestions for the roadmap?
-- Open an issue: https://github.com/scttfrdmn/aws-jupyter/issues
-- Start a discussion: https://github.com/scttfrdmn/aws-jupyter/discussions
+- Open an issue: https://github.com/scttfrdmn/aws-ide/issues
+- Start a discussion: https://github.com/scttfrdmn/aws-ide/discussions
 
 We prioritize features based on:
 1. User demand
-2. Project goals
-3. Implementation complexity
-4. Maintainability
-5. Community contributions
+2. Multi-IDE compatibility
+3. Project goals
+4. Implementation complexity
+5. Maintainability
+6. Community contributions

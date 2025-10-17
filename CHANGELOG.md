@@ -7,6 +7,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-01-16
+
+### 🎉 Monorepo Transformation: Multi-IDE Platform
+
+This release transforms aws-jupyter into AWS IDE, a monorepo supporting multiple cloud-based IDE types.
+
+### Major Changes
+
+#### **Monorepo Architecture**
+- Transformed single-app project into Go workspace monorepo
+- Created `pkg/` module for shared AWS infrastructure
+- Created `apps/jupyter/` with complete aws-jupyter implementation
+- Created `apps/rstudio/` with basic aws-rstudio implementation
+- All apps share infrastructure while maintaining independence
+
+#### **Code Organization**
+- **Shared library (`pkg/`)**: AWS SDK integrations, CLI utilities, configuration
+- **App-specific code (`apps/*/`)**: IDE-specific logic, environments, user data
+- **Go workspace**: Proper module boundaries with `go.work`
+- **Clean separation**: No code duplication between apps
+
+#### **Build & CI/CD**
+- Updated CI/CD pipeline for monorepo structure
+- Matrix builds for pkg, jupyter, and rstudio modules
+- Separate test, lint, and build jobs for each component
+- All builds and tests passing
+
+#### **Documentation**
+- Updated root README for multi-IDE overview
+- Created comprehensive RStudio README
+- Updated ROADMAP for multi-IDE roadmap (v0.5.0-v1.0.0)
+- Consolidated docs into app-specific directories
+- Removed duplicate documentation
+
+#### **aws-rstudio (New)**
+- Basic implementation with core commands
+- Shares all infrastructure with Jupyter
+- Supports launch, list, status, connect, stop, terminate
+- SSH and Session Manager connection methods
+- Public/private subnet support
+- Feature parity work in progress (see ROADMAP)
+
+### Added
+- **aws-rstudio CLI**: New command-line tool for RStudio Server
+- **Shared pkg/ library**: Reusable AWS infrastructure code
+- **Go workspace**: Multi-module project structure
+- **Monorepo CI/CD**: Matrix builds for all modules
+- **RStudio README**: Complete documentation for RStudio launcher
+
+### Changed
+- **Project name**: aws-jupyter → AWS IDE (aws-ide)
+- **Repository structure**: Single app → Monorepo
+- **Code location**: `internal/` → `pkg/` (shared) and `apps/*/internal/` (app-specific)
+- **Documentation**: Root docs → `apps/*/docs/`
+- **Build process**: Single binary → Multiple app binaries
+- **Version strategy**: Shared version across all apps
+
+### Fixed
+- Test failures in apps/jupyter/internal/cli/launch_test.go (function signature mismatches)
+- Build artifacts not ignored by git
+- CI/CD pipeline incompatible with workspace structure
+
+### Removed
+- Legacy `internal/` directory (moved to `pkg/`)
+- Legacy `cmd/` directory (moved to `apps/*/cmd/`)
+- Root-level `go.mod` and `go.sum` (using `go.work` instead)
+- Duplicate documentation in root `docs/` directory
+
+### Migration Notes
+
+**For Existing Users:**
+- `aws-jupyter` functionality unchanged - all features preserved
+- Binary location changed: `./aws-jupyter` → `./apps/jupyter/aws-jupyter`
+- Install path unchanged: `/usr/local/bin/aws-jupyter`
+- Configuration compatible: `~/.aws-jupyter/` still used
+- State files compatible: No migration needed
+
+**For Developers:**
+- Update imports: `github.com/scttfrdmn/aws-jupyter/internal/...` → `github.com/scttfrdmn/aws-ide/pkg/...`
+- Build from app directory: `cd apps/jupyter && go build ./cmd/aws-jupyter`
+- Run tests per module: `cd pkg && go test ./...` or `cd apps/jupyter && go test ./...`
+- CI/CD uses matrix builds for each module
+
+### Metrics
+- **Modules**: 3 (pkg, jupyter, rstudio)
+- **Test Coverage**: 18.7% overall (unchanged)
+- **Build Status**: All modules building successfully
+- **Binary Size**: ~44MB per app
+- **IDE Support**: 2 types (Jupyter Lab, RStudio Server)
+
+### Looking Forward
+
+This monorepo transformation enables:
+- Easy addition of new IDE types (VSCode, JupyterHub, etc.)
+- Shared infrastructure reduces duplication
+- Consistent behavior across all IDE types
+- Independent versioning possible in future
+
+See [ROADMAP.md](ROADMAP.md) for v0.5.0-v1.0.0 planning.
+
+---
+
 ## [0.2.0] - 2025-01-14
 
 ### 🎉 Major Release: Production-Ready with Complete Lifecycle Management
