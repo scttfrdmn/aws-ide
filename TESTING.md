@@ -191,29 +191,66 @@ func TestSSMClientCheckServiceReadiness(t *testing.T) {
 
 ## Integration Testing
 
-Integration tests use mocked AWS services (localstack or moto) to test AWS interactions without real infrastructure costs.
+Integration tests use LocalStack to emulate AWS services locally, allowing realistic testing without real infrastructure costs.
 
-### Setup (Planned)
+### Why LocalStack?
+
+**LocalStack vs Moto:**
+- **LocalStack**: Full AWS cloud stack in Docker, language-agnostic, realistic service emulation
+- **Moto**: Python library for mocking AWS, better for Python projects
+- **Choice**: LocalStack is ideal for Go projects like aws-ide
+
+### Setup with Docker
 
 ```bash
-# Install localstack
-pip install localstack
+# Start LocalStack with Docker Compose
+cat > docker-compose.localstack.yml <<EOF
+version: '3.8'
+services:
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"  # LocalStack gateway
+    environment:
+      - SERVICES=ec2,ssm,iam
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - ./tmp/localstack:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+EOF
 
-# Start localstack
-localstack start
+docker-compose -f docker-compose.localstack.yml up -d
 
-# Configure for testing
+# Verify LocalStack is running
+curl http://localhost:4566/_localstack/health
+```
+
+### Running Integration Tests
+
+```bash
+# Set environment for LocalStack
 export AWS_ENDPOINT_URL=http://localhost:4566
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
-```
+export AWS_DEFAULT_REGION=us-west-2
 
-### Running Integration Tests (Future)
+# Run integration tests (uses build tag)
+make test-integration
 
-```bash
-# Once implemented
+# Or run directly
 cd pkg
 go test -tags=integration -v ./...
+```
+
+### Cleanup
+
+```bash
+# Stop LocalStack
+docker-compose -f docker-compose.localstack.yml down
+
+# Remove all data
+rm -rf ./tmp/localstack
 ```
 
 ## End-to-End Testing
@@ -306,11 +343,31 @@ go test -v ./...
 **Issue**: Unit tests make network calls
 **Solution**: Mock AWS clients properly
 
+## Testing Strategy Summary
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Testing Pyramid                          │
+├─────────────────────────────────────────────────────────────┤
+│  E2E Tests          │ Real AWS    │ Slow, expensive         │
+│  (make test-e2e)    │ Full stack  │ ~30 min timeout         │
+├─────────────────────────────────────────────────────────────┤
+│  Smoke Tests        │ Real AWS    │ Quick validation        │
+│  (make test-smoke)  │ Minimal     │ ~5-10 min               │
+├─────────────────────────────────────────────────────────────┤
+│  Integration Tests  │ LocalStack  │ Realistic, no cost      │
+│  (make test-int)    │ Docker      │ ~5-10 min               │
+├─────────────────────────────────────────────────────────────┤
+│  Unit Tests         │ No AWS      │ Fast, reliable          │
+│  (make test-unit)   │ Mocks       │ <30 sec                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## Future Testing Improvements
 
 Roadmap for testing enhancements:
 
-- [ ] **v0.6.0**: Integration test infrastructure (localstack/moto)
+- [ ] **v0.6.0**: Integration test infrastructure with LocalStack (Docker-based)
 - [ ] **v0.6.0**: Increase coverage to 40%+ across all packages
 - [ ] **v0.6.0**: Automated E2E test suite in CI
 - [ ] **v0.7.0**: Performance benchmarks
