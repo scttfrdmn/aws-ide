@@ -87,6 +87,7 @@ archives:
       - README.md
       - CHANGELOG.md
       - apps/rstudio/README.md
+      - apps/rstudio/environments/*.yaml
     formats:
       - tar.gz
     format_overrides:
@@ -177,5 +178,70 @@ brews:
     license: Apache-2.0
     install: |
       bin.install "aws-rstudio"
+
+      # Install environment templates
+      pkgshare.install Dir["apps/rstudio/environments/*.yaml"]
+      (pkgshare/"environments").mkpath
+      Dir["apps/rstudio/environments/*.yaml"].each do |env|
+        (pkgshare/"environments").install env
+      end
     test: |
       system "#{bin}/aws-rstudio", "--version"
+
+# Scoop manifests for Windows
+scoops:
+  - name: aws-jupyter
+    ids:
+      - jupyter
+    repository:
+      owner: scttfrdmn
+      name: scoop-bucket
+    homepage: https://github.com/scttfrdmn/aws-ide
+    description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
+    license: Apache-2.0
+
+  - name: aws-rstudio
+    ids:
+      - rstudio
+    repository:
+      owner: scttfrdmn
+      name: scoop-bucket
+    homepage: https://github.com/scttfrdmn/aws-ide
+    description: CLI tool for launching RStudio Server instances on AWS EC2 Graviton processors
+    license: Apache-2.0
+
+# Linux packages (deb and rpm)
+nfpms:
+  - id: jupyter-packages
+    builds:
+      - aws-jupyter
+    package_name: aws-jupyter
+    vendor: Scott Friedman
+    homepage: https://github.com/scttfrdmn/aws-ide
+    maintainer: Scott Friedman <scttfrdmn@users.noreply.github.com>
+    description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
+    license: Apache-2.0
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: apps/jupyter/environments/*.yaml
+        dst: /usr/share/aws-jupyter/environments/
+
+  - id: rstudio-packages
+    builds:
+      - aws-rstudio
+    package_name: aws-rstudio
+    vendor: Scott Friedman
+    homepage: https://github.com/scttfrdmn/aws-ide
+    maintainer: Scott Friedman <scttfrdmn@users.noreply.github.com>
+    description: CLI tool for launching RStudio Server instances on AWS EC2 Graviton processors
+    license: Apache-2.0
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: apps/rstudio/environments/*.yaml
+        dst: /usr/share/aws-rstudio/environments/
