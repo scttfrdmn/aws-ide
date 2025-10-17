@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: aws-ide-localstack
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"  # LocalStack gateway
+      - "4510-4559:4510-4559"  # External service ports
+    environment:
+      # Services to emulate
+      - SERVICES=ec2,ssm,iam,sts
+
+      # Debug settings
+      - DEBUG=1
+      - LS_LOG=info
+
+      # Data persistence
+      - DATA_DIR=/tmp/localstack/data
+
+      # Docker configuration
+      - DOCKER_HOST=unix:///var/run/docker.sock
+
+      # AWS configuration
+      - DEFAULT_REGION=us-west-2
+
+      # Feature flags
+      - EAGER_SERVICE_LOADING=1
+
+    volumes:
+      # Persist LocalStack data between restarts
+      - ./tmp/localstack:/tmp/localstack
+
+      # Allow LocalStack to use Docker for lambda/ECS
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  default:
+    name: aws-ide-test

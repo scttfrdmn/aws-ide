@@ -43,3 +43,9 @@ Thumbs.db
 *.yaml.bak
 .aws-jupyter/
 dist/
+
+# Testing
+tmp/localstack/
+coverage.out
+coverage.html
+*.test.log
