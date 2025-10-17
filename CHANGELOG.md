@@ -8,8 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **aws-vscode**: New VSCode Server (code-server) CLI tool (alpha)
+- **aws-vscode**: New VSCode Server (code-server) CLI tool (beta)
   - Complete CLI structure with all subcommands (launch, list, connect, stop, start, terminate, status, env, key)
+  - **Full launch command implementation** with all features:
+    - Environment selection (web-dev, python-dev, go-dev, fullstack)
+    - Custom AMI support
+    - Idle timeout configuration (default: 4h)
+    - SSH and Session Manager connection methods
+    - Public and private subnet support
+    - NAT Gateway creation for private subnets
+    - Dry-run mode to preview actions
+    - Instance type override
+    - Availability zone selection
   - User-data script generator for automatic code-server setup
   - 4 built-in environments: web-dev (default), python-dev, go-dev, fullstack
   - Automatic language runtime installation (Node.js 20, Python 3, Go 1.22)
@@ -18,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Idle detection and auto-stop system
   - SSH tunnel and Session Manager port forwarding support
   - Comprehensive README with quick start and troubleshooting
-  - Launch command structure defined (full implementation in progress)
+  - Ready for real-world testing
 - Added apps/vscode to Go workspace
 - Comprehensive test suite for pkg/config module (84.7% coverage)
   - environment_test.go: Environment loading, validation, listing with 7 test functions

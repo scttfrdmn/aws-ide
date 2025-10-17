@@ -153,11 +153,35 @@ aws-vscode launch [flags]
 Launch a new VSCode Server instance.
 
 **Flags:**
-- `-e, --environment`: Environment preset (web-dev, python-dev, go-dev, fullstack)
-- `-p, --profile`: AWS profile to use
+- `-e, --env`: Environment preset (web-dev, python-dev, go-dev, fullstack) (default: "web-dev")
+- `-t, --instance-type`: Override instance type
+- `--ami`: Use custom AMI instead of base AMI
+- `-i, --idle-timeout`: Auto-shutdown timeout (default: "4h")
+- `-p, --profile`: AWS profile to use (default: "default")
 - `-r, --region`: AWS region
+- `-z, --availability-zone`: Availability zone (e.g., us-east-1a)
+- `--dry-run`: Show what would be done without making changes
+- `-c, --connection`: Connection method: ssh or session-manager (default: "ssh")
+- `-s, --subnet-type`: Subnet type: public or private (default: "public")
+- `--create-nat-gateway`: Create NAT Gateway for private subnet internet access
 
-**Note:** The full launch implementation is in progress. Currently shows a placeholder message.
+**Examples:**
+```bash
+# Launch with defaults (web-dev, SSH, public subnet)
+aws-vscode launch
+
+# Launch Python environment
+aws-vscode launch --env python-dev
+
+# Launch with Session Manager (no SSH)
+aws-vscode launch --connection session-manager
+
+# Launch in private subnet with NAT Gateway
+aws-vscode launch --subnet-type private --create-nat-gateway
+
+# Dry run to see what would be created
+aws-vscode launch --dry-run
+```
 
 ### list
 ```bash
@@ -350,21 +374,31 @@ aws-vscode connect INSTANCE_ID --port 8090
 
 ## Development Status
 
-**Current Version:** 0.1.0 (Alpha)
+**Current Version:** 0.1.0 (Beta)
 
 ### ✅ Completed
-- Core CLI structure
-- All subcommands (list, connect, stop, start, terminate, status, env, key)
-- User-data scripts for code-server setup
-- 4 environment presets
-- Build system integrated with monorepo
+- ✅ Core CLI structure
+- ✅ All subcommands (list, connect, stop, start, terminate, status, env, key)
+- ✅ **Full launch command implementation** with all features:
+  - Environment selection and validation
+  - Custom AMI support
+  - Idle timeout configuration
+  - SSH and Session Manager connections
+  - Public and private subnets
+  - NAT Gateway creation
+  - Dry-run mode
+- ✅ User-data scripts for code-server setup
+- ✅ 4 environment presets
+- ✅ Build system integrated with monorepo
+- ✅ Comprehensive documentation
 
-### 🚧 In Progress
-- Full launch command implementation (currently placeholder)
-- Integration testing with AWS
-- Documentation refinement
+### 🧪 Testing Needed
+- Integration testing with actual AWS instances
+- End-to-end launch → connect → use workflow
+- Extension installation verification
+- Idle detection system testing
 
-### 📋 Planned
+### 📋 Planned Enhancements
 - HTTPS support with Let's Encrypt
 - GitHub OAuth authentication
 - Workspace templates
