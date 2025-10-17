@@ -29,17 +29,28 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("exec > >(tee /var/log/user-data.log)\n")
 	sb.WriteString("exec 2>&1\n\n")
 
-	sb.WriteString("echo 'Starting aws-vscode environment setup'\n")
+	// Create progress log file
+	sb.WriteString("# Setup progress tracking\n")
+	sb.WriteString("PROGRESS_LOG=\"/var/log/setup-progress.log\"\n")
+	sb.WriteString("touch $PROGRESS_LOG\n")
+	sb.WriteString("chmod 644 $PROGRESS_LOG\n\n")
+
+	sb.WriteString("log_progress() {\n")
+	sb.WriteString("  echo \"STEP:$1\" | tee -a $PROGRESS_LOG\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("log_progress 'Starting aws-vscode environment setup'\n")
 	sb.WriteString("echo 'Environment: " + env.Name + "'\n\n")
 
 	// Update system
 	sb.WriteString("# Update system packages\n")
+	sb.WriteString("log_progress 'Updating system packages'\n")
 	sb.WriteString("apt-get update -y\n")
 	sb.WriteString("apt-get upgrade -y\n\n")
 
 	// Install SSM Agent
 	sb.WriteString("# Install AWS Systems Manager Agent\n")
-	sb.WriteString("echo 'Installing SSM Agent...'\n")
+	sb.WriteString("log_progress 'Installing SSM Agent'\n")
 	sb.WriteString("snap install amazon-ssm-agent --classic\n")
 	sb.WriteString("systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service\n")
 	sb.WriteString("systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service\n\n")
@@ -47,7 +58,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install system packages
 	if len(env.Packages) > 0 {
 		sb.WriteString("# Install system packages\n")
-		sb.WriteString("echo 'Installing system packages...'\n")
+		sb.WriteString("log_progress 'Installing system packages'\n")
 		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get install -y \\\n")
 		for i, pkg := range env.Packages {
 			if i == len(env.Packages)-1 {
@@ -60,14 +71,14 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 
 	// Install code-server using official installation script
 	sb.WriteString("# Install code-server\n")
-	sb.WriteString("echo 'Installing code-server...'\n")
+	sb.WriteString("log_progress 'Installing code-server'\n")
 	sb.WriteString("export HOME=/root\n")
 	sb.WriteString("curl -fsSL https://code-server.dev/install.sh | sh\n\n")
 
 	// Install Node.js if specified
 	if nodeVersion, ok := env.EnvironmentVars["NODEJS_VERSION"]; ok {
 		sb.WriteString("# Install Node.js " + nodeVersion + "\n")
-		sb.WriteString("echo 'Installing Node.js...'\n")
+		sb.WriteString("log_progress 'Installing Node.js " + nodeVersion + "'\n")
 		sb.WriteString("curl -fsSL https://deb.nodesource.com/setup_" + nodeVersion + ".x | bash -\n")
 		sb.WriteString("apt-get install -y nodejs\n")
 		sb.WriteString("npm install -g yarn pnpm\n\n")
@@ -157,7 +168,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install VSCode extensions if specified
 	if extensions, ok := env.EnvironmentVars["VSCODE_EXTENSIONS"]; ok && extensions != "" {
 		sb.WriteString("# Install VSCode extensions\n")
-		sb.WriteString("echo 'Installing VSCode extensions...'\n")
+		sb.WriteString("log_progress 'Installing VSCode extensions'\n")
 		extList := strings.Split(extensions, ",")
 		for _, ext := range extList {
 			ext = strings.TrimSpace(ext)
@@ -188,6 +199,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 
 	// Enable and start code-server service
 	sb.WriteString("# Enable and start code-server\n")
+	sb.WriteString("log_progress 'Starting code-server service'\n")
 	sb.WriteString("systemctl daemon-reload\n")
 	sb.WriteString("systemctl enable code-server.service\n")
 	sb.WriteString("systemctl start code-server.service\n\n")
@@ -232,6 +244,8 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("echo 'Idle detection system installed and enabled'\n\n")
 
 	// Final status
+	sb.WriteString("log_progress 'Setup complete - VSCode Server is ready'\n")
+	sb.WriteString("echo 'COMPLETE' >> $PROGRESS_LOG\n")
 	sb.WriteString("echo 'aws-vscode environment setup complete!'\n")
 	sb.WriteString("echo 'VSCode Server is running on port 8080'\n")
 	sb.WriteString("echo 'Use Session Manager or SSH tunnel to connect'\n")

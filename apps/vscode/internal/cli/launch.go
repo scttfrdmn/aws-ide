@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
-
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -462,13 +462,21 @@ func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env
 		return nil, fmt.Errorf("failed to get instance info: %w", err)
 	}
 
-	// Poll for VSCode Server readiness
+	// Poll for VSCode Server readiness with progress streaming
 	fmt.Println("⏳ Instance is running, waiting for VSCode Server to be ready...")
 	fmt.Println("   (This typically takes 2-3 minutes for code-server installation)")
+	fmt.Println()
+
+	// Try to stream progress if we have SSH access
+	progressDone := make(chan bool)
+	go streamSetupProgress(ctx, instance, keyInfo, progressDone)
 
 	if err := waitForVSCodeReady(ctx, instance); err != nil {
-		fmt.Printf("⚠️  Warning: %v\n", err)
+		close(progressDone) // Stop progress streaming
+		fmt.Printf("\n⚠️  Warning: %v\n", err)
 		fmt.Println("   You can still try connecting - the service may still be starting up.")
+	} else {
+		close(progressDone) // Stop progress streaming
 	}
 
 	return instance, nil
@@ -631,6 +639,70 @@ func printDryRunActions(env *config.Environment, connectionMethod, subnetType st
 	fmt.Printf("  %d. Save instance state locally\n", actionNum)
 	actionNum++
 	fmt.Printf("  %d. Display connection information\n", actionNum)
+}
+
+// streamSetupProgress streams setup progress by tailing the progress log via SSH
+func streamSetupProgress(ctx context.Context, instance *types.Instance, keyInfo *aws.KeyPairInfo, done chan bool) {
+	// Can only stream progress if we have SSH access
+	if keyInfo == nil || instance.PublicIpAddress == nil {
+		return
+	}
+
+	host := *instance.PublicIpAddress
+	keyStorage, err := config.DefaultKeyStorage()
+	if err != nil {
+		return
+	}
+
+	keyPath := keyStorage.GetKeyPath(keyInfo.Name)
+
+	// Wait a bit for instance to be accessible and log file to be created
+	time.Sleep(30 * time.Second)
+
+	// Tail the progress log
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	lastLine := ""
+	seenSteps := make(map[string]bool)
+
+	for {
+		select {
+		case <-done:
+			return
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Try to read the progress log via SSH
+			cmd := fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=no -o ConnectTimeout=3 -o BatchMode=yes ubuntu@%s 'tail -20 /var/log/setup-progress.log 2>/dev/null || echo \"\"' 2>/dev/null",
+				keyPath, host)
+
+			output, err := exec.CommandContext(ctx, "bash", "-c", cmd).Output()
+			if err != nil {
+				continue
+			}
+
+			lines := strings.Split(string(output), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" || line == lastLine {
+					continue
+				}
+
+				if strings.HasPrefix(line, "STEP:") {
+					step := strings.TrimPrefix(line, "STEP:")
+					if !seenSteps[step] {
+						fmt.Printf("   📋 %s\n", step)
+						seenSteps[step] = true
+					}
+				} else if line == "COMPLETE" {
+					fmt.Println("   ✅ Setup complete!")
+					return
+				}
+				lastLine = line
+			}
+		}
+	}
 }
 
 // waitForVSCodeReady polls the VSCode Server until it's ready to accept connections
