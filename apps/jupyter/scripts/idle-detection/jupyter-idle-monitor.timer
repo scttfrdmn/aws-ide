@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Jupyter idle monitor every 5 minutes
+Requires=jupyter-idle-monitor.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

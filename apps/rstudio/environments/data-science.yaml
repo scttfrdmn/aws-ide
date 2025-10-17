@@ -1,0 +1,46 @@
+name: data-science
+ami_base: ubuntu-24.04-arm64
+instance_type: t4g.medium
+ebs_volume_size: 30
+
+packages:
+  - build-essential
+  - git
+  - curl
+  - wget
+  - vim
+  - htop
+  - libcurl4-openssl-dev
+  - libssl-dev
+  - libxml2-dev
+  - libfontconfig1-dev
+  - libharfbuzz-dev
+  - libfribidi-dev
+  - libfreetype6-dev
+  - libpng-dev
+  - libtiff5-dev
+  - libjpeg-dev
+
+r_packages:
+  - tidyverse
+  - data.table
+  - shiny
+  - rmarkdown
+  - plotly
+  - ggplot2
+  - dplyr
+  - tidyr
+  - readr
+  - lubridate
+  - stringr
+
+pip_packages:
+  - pandas
+  - numpy
+  - matplotlib
+  - scikit-learn
+  - reticulate
+
+environment_vars:
+  RSTUDIO_WHICH_R: /usr/bin/R
+  R_LIBS_USER: ~/R/library

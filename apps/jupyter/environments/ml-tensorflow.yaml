@@ -1,0 +1,36 @@
+name: "ML TensorFlow"
+instance_type: "m7g.xlarge"
+ami_base: "ubuntu22-arm64"
+ebs_volume_size: 40
+packages:
+  - python3-pip
+  - python3-dev
+  - python3-venv
+  - git
+  - htop
+  - awscli
+  - build-essential
+  - libssl-dev
+  - libffi-dev
+pip_packages:
+  - tensorflow-aarch64
+  - transformers
+  - datasets
+  - accelerate
+  - evaluate
+  - pandas
+  - numpy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - jupyterlab
+  - ipywidgets
+  - notebook
+  - tensorboard
+  - wandb
+  - mlflow
+  - optuna
+environment_vars:
+  PYTHONPATH: "/home/ubuntu/notebooks"
+  TRANSFORMERS_CACHE: "/home/ubuntu/.cache/huggingface"
+  WANDB_CACHE_DIR: "/home/ubuntu/.cache/wandb"

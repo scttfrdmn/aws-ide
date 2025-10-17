@@ -1,0 +1,14 @@
+[Unit]
+Description=Jupyter Idle Monitor
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/jupyter-idle-monitor.sh
+Environment="JUPYTER_PORT=8888"
+Environment="CPU_THRESHOLD=10"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

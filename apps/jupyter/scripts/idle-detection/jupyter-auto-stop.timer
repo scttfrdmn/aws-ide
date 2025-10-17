@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for auto-stop every minute
+Requires=jupyter-auto-stop.service
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
