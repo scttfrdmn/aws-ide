@@ -23,17 +23,17 @@ func NewAMISelector(region string) *AMISelector {
 func (a *AMISelector) GetAMI(ctx context.Context, client *EC2Client, amiBase string) (string, error) {
 	// Map of AMI base names to Ubuntu versions and architectures
 	switch amiBase {
-	case "ubuntu24-arm64":
+	case "ubuntu24-arm64", "ubuntu-24.04-arm64":
 		return a.findUbuntuAMI(ctx, client, "24.04", "arm64")
-	case "ubuntu24-x86_64":
+	case "ubuntu24-x86_64", "ubuntu-24.04-x86_64":
 		return a.findUbuntuAMI(ctx, client, "24.04", "x86_64")
-	case "ubuntu22-arm64":
+	case "ubuntu22-arm64", "ubuntu-22.04-arm64":
 		return a.findUbuntuAMI(ctx, client, "22.04", "arm64")
-	case "ubuntu22-x86_64":
+	case "ubuntu22-x86_64", "ubuntu-22.04-x86_64":
 		return a.findUbuntuAMI(ctx, client, "22.04", "x86_64")
-	case "ubuntu20-arm64":
+	case "ubuntu20-arm64", "ubuntu-20.04-arm64":
 		return a.findUbuntuAMI(ctx, client, "20.04", "arm64")
-	case "ubuntu20-x86_64":
+	case "ubuntu20-x86_64", "ubuntu-20.04-x86_64":
 		return a.findUbuntuAMI(ctx, client, "20.04", "x86_64")
 	case "amazonlinux2-arm64":
 		return a.findAmazonLinuxAMI(ctx, client, "2", "arm64")

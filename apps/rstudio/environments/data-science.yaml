@@ -1,5 +1,5 @@
 name: data-science
-ami_base: ubuntu-24.04-arm64
+ami_base: ubuntu-22.04-arm64
 instance_type: t4g.medium
 ebs_volume_size: 30
 
