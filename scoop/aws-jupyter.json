@@ -6,11 +6,11 @@
     "architecture": {
         "64bit": {
             "url": "https://github.com/scttfrdmn/aws-ide/releases/download/v0.5.0/aws-jupyter_Windows_x86_64.zip",
-            "hash": "sha256:TBD"
+            "hash": "1bd98aa5871f4e67372da94574a341cc01130c59d4fca3caa51d6ce189e9f498"
         },
         "arm64": {
             "url": "https://github.com/scttfrdmn/aws-ide/releases/download/v0.5.0/aws-jupyter_Windows_arm64.zip",
-            "hash": "sha256:TBD"
+            "hash": "0577c153ed7d771c2078179027c35284b30d7fe25525b61caceb11613d048765"
         }
     },
     "bin": "aws-jupyter.exe",
