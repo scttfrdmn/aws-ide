@@ -1,0 +1,65 @@
+name: bioconductor
+ami_base: ubuntu-24.04-arm64
+instance_type: t4g.large
+ebs_volume_size: 50
+
+packages:
+  - build-essential
+  - git
+  - curl
+  - wget
+  - vim
+  - htop
+  - libcurl4-openssl-dev
+  - libssl-dev
+  - libxml2-dev
+  - libfontconfig1-dev
+  - libharfbuzz-dev
+  - libfribidi-dev
+  - libfreetype6-dev
+  - libpng-dev
+  - libtiff5-dev
+  - libjpeg-dev
+  - libgit2-dev
+  - libgsl-dev
+  - libblas-dev
+  - liblapack-dev
+
+r_packages:
+  # Core Bioconductor
+  - BiocManager
+  - Biobase
+  - BiocGenerics
+  - SummarizedExperiment
+  - GenomicRanges
+  - GenomicFeatures
+  - GenomicAlignments
+
+  # Sequencing analysis
+  - DESeq2
+  - edgeR
+  - limma
+
+  # Visualization
+  - ggplot2
+  - ComplexHeatmap
+  - EnhancedVolcano
+
+  # Annotation
+  - org.Hs.eg.db
+  - TxDb.Hsapiens.UCSC.hg38.knownGene
+
+  # Core tidyverse for data manipulation
+  - tidyverse
+  - dplyr
+  - ggplot2
+  - readr
+
+  # Reporting
+  - rmarkdown
+  - knitr
+
+environment_vars:
+  RSTUDIO_WHICH_R: /usr/bin/R
+  R_LIBS_USER: ~/R/library
+  BIOC_VERSION: "3.18"

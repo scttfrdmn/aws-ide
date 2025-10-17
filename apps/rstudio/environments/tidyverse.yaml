@@ -1,0 +1,67 @@
+name: tidyverse
+ami_base: ubuntu-24.04-arm64
+instance_type: t4g.medium
+ebs_volume_size: 30
+
+packages:
+  - build-essential
+  - git
+  - curl
+  - wget
+  - vim
+  - htop
+  - libcurl4-openssl-dev
+  - libssl-dev
+  - libxml2-dev
+  - libfontconfig1-dev
+  - libharfbuzz-dev
+  - libfribidi-dev
+  - libfreetype6-dev
+  - libpng-dev
+  - libtiff5-dev
+  - libjpeg-dev
+  - libgit2-dev
+
+r_packages:
+  # Core tidyverse
+  - tidyverse
+  - dplyr
+  - ggplot2
+  - tidyr
+  - readr
+  - purrr
+  - tibble
+  - stringr
+  - forcats
+
+  # Extended ecosystem
+  - lubridate
+  - glue
+  - fs
+  - here
+  - janitor
+
+  # Data manipulation
+  - data.table
+  - dtplyr
+
+  # Visualization
+  - plotly
+  - ggrepel
+  - patchwork
+  - scales
+
+  # Reporting
+  - rmarkdown
+  - knitr
+  - quarto
+
+  # Development
+  - devtools
+  - usethis
+  - testthat
+  - roxygen2
+
+environment_vars:
+  RSTUDIO_WHICH_R: /usr/bin/R
+  R_LIBS_USER: ~/R/library

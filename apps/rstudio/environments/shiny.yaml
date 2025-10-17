@@ -1,0 +1,66 @@
+name: shiny
+ami_base: ubuntu-24.04-arm64
+instance_type: t4g.medium
+ebs_volume_size: 30
+
+packages:
+  - build-essential
+  - git
+  - curl
+  - wget
+  - vim
+  - htop
+  - libcurl4-openssl-dev
+  - libssl-dev
+  - libxml2-dev
+  - libfontconfig1-dev
+  - libharfbuzz-dev
+  - libfribidi-dev
+  - libfreetype6-dev
+  - libpng-dev
+  - libtiff5-dev
+  - libjpeg-dev
+  - libgit2-dev
+  - libsodium-dev
+
+r_packages:
+  # Shiny core
+  - shiny
+  - shinydashboard
+  - shinyWidgets
+  - shinyjs
+  - shinythemes
+  - bslib
+
+  # Interactive components
+  - DT
+  - plotly
+  - leaflet
+  - htmlwidgets
+
+  # Data manipulation & visualization
+  - tidyverse
+  - dplyr
+  - ggplot2
+  - tidyr
+  - readr
+  - lubridate
+
+  # Web development helpers
+  - httr
+  - jsonlite
+  - promises
+  - future
+
+  # Reporting
+  - rmarkdown
+  - flexdashboard
+
+  # Development
+  - devtools
+  - golem
+
+environment_vars:
+  RSTUDIO_WHICH_R: /usr/bin/R
+  R_LIBS_USER: ~/R/library
+  SHINY_PORT: "3838"
