@@ -115,7 +115,10 @@ func runDeleteAllAMIs(region string) error {
 	fmt.Printf("Type 'yes' to confirm: ")
 
 	var confirmation string
-	fmt.Scanln(&confirmation)
+	if _, err := fmt.Scanln(&confirmation); err != nil {
+		fmt.Printf("Failed to read input: %v\n", err)
+		return fmt.Errorf("failed to read confirmation: %w", err)
+	}
 
 	if confirmation != "yes" {
 		fmt.Println("Deletion cancelled")
@@ -174,6 +177,8 @@ func cleanupStateFile(deletedAMIs []aws.AMIInfo) {
 	}
 
 	if modified {
-		state.Save()
+		if err := state.Save(); err != nil {
+			fmt.Printf("Warning: failed to save state file: %v\n", err)
+		}
 	}
 }

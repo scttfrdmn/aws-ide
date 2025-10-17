@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Comprehensive test suite for pkg/config module (84.7% coverage)
+  - environment_test.go: Environment loading, validation, listing with 7 test functions
+  - state_test.go: State management, save/load cycles with 11 test functions
+  - keys_test.go: SSH key storage, permissions, cleanup with 29 test functions
+  - All tests use isolated temp directories with proper cleanup
+
+### Fixed
+- golangci-lint errcheck violations in pkg/cli/delete-ami.go
+- golangci-lint errcheck violation in pkg/config/environment_test.go
+- All code now passes golangci-lint with zero issues
+
 ## [0.5.0] - 2025-01-16
 
 ### 🎉 Monorepo Transformation: Multi-IDE Platform
@@ -246,6 +258,7 @@ This release marks a significant milestone with comprehensive code quality impro
 - Comprehensive README with installation and usage instructions
 - Project documentation and contributing guidelines
 
-[Unreleased]: https://github.com/scttfrdmn/aws-jupyter/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/scttfrdmn/aws-jupyter/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/scttfrdmn/aws-jupyter/releases/tag/v0.1.0
+[Unreleased]: https://github.com/scttfrdmn/aws-ide/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/scttfrdmn/aws-ide/compare/v0.2.0...v0.5.0
+[0.2.0]: https://github.com/scttfrdmn/aws-ide/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/scttfrdmn/aws-ide/releases/tag/v0.1.0

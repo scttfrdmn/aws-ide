@@ -260,7 +260,11 @@ func TestListEnvironments_Deduplication(t *testing.T) {
 	if err := os.MkdirAll(builtinEnvDir, 0755); err != nil {
 		t.Fatalf("Failed to create builtin env dir: %v", err)
 	}
-	defer os.RemoveAll(builtinEnvDir)
+	defer func() {
+		if err := os.RemoveAll(builtinEnvDir); err != nil {
+			t.Logf("Warning: failed to remove builtin env dir: %v", err)
+		}
+	}()
 
 	// Create same environment in both locations
 	content := `name: "duplicate"
