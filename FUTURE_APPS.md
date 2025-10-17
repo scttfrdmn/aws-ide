@@ -164,7 +164,52 @@ This document tracks potential applications to add to the aws-ide project, focus
 
 ---
 
-### 5. Datasette ⭐⭐⭐
+### 5. Streamlit ⭐⭐⭐⭐⭐
+
+**What**: Python framework for creating interactive data applications and dashboards
+
+**Use Case**:
+- Build interactive data exploration tools
+- Create custom dashboards for research projects
+- Share ML models with interactive demos
+- Rapid prototyping of data applications
+- Create teaching materials with interactive visualizations
+
+**Technical Details**:
+- Language: Python
+- Port: 8501 (default, configurable)
+- Memory: ~256MB-512MB + app requirements
+- Install: pip install streamlit
+- Hot-reloading for development
+- Web-based interface with no frontend experience required
+
+**User Persona**:
+- Python users (especially Jupyter users)
+- Data scientists wanting to share interactive analyses
+- ML researchers building model demos
+- Educators creating interactive teaching tools
+- Any researcher wanting to turn scripts into web apps
+
+**Disciplines**: All disciplines, especially data science, ML, computational research
+
+**Implementation Complexity**: Low
+- Pure Python, minimal dependencies
+- Single command to start (streamlit run app.py)
+- Well-documented with large community
+- Natural companion to Jupyter
+- Similar deployment pattern to Jupyter
+
+**Note**: Extremely popular in data science community, natural progression from Jupyter notebooks
+
+**References**:
+- Website: https://streamlit.io/
+- GitHub: https://github.com/streamlit/streamlit
+- Documentation: https://docs.streamlit.io/
+- Gallery: https://streamlit.io/gallery
+
+---
+
+### 6. Datasette ⭐⭐⭐
 
 **What**: Instant JSON API and web interface for SQLite/CSV datasets
 
@@ -211,26 +256,32 @@ This document tracks potential applications to add to the aws-ide project, focus
 
 **Recommended Order**:
 
-1. **OpenRefine** (v0.7.0)
+1. **Streamlit** (v0.7.0)
+   - Extremely easy to implement (lowest complexity)
+   - Massive demand in Python/data science community
+   - Natural companion to Jupyter
+   - Low complexity, high impact
+
+2. **OpenRefine** (v0.7.0)
    - Fills biggest gap (data cleaning)
    - Universal need across disciplines
    - Medium complexity
 
-2. **Octave Jupyter Kernel** (v0.7.0 or v0.7.1)
+3. **Octave Jupyter Kernel** (v0.7.0 or v0.7.1)
    - Quick win (extend existing jupyter)
    - Test demand before building standalone
 
-3. **Datasette** (v0.7.0 or v0.7.1)
+4. **Datasette** (v0.7.0 or v0.7.1)
    - Very easy to implement
    - Could bundle with another app
    - Good for quick wins
 
-4. **Shiny Server** (v0.8.0)
+5. **Shiny Server** (v0.8.0)
    - Natural companion to RStudio
    - Medium complexity
    - High value for R users
 
-5. **Label Studio** (v0.8.0 or v0.9.0)
+6. **Label Studio** (v0.8.0 or v0.9.0)
    - More specialized use case
    - Medium complexity
    - High value for ML/qualitative research
