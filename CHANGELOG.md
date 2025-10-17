@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SSM-based readiness polling**: Secure service health checking without exposed ports
+  - New `pkg/aws/ssm.go` module with SSMClient for AWS Systems Manager operations
+  - `SSMClient.CheckServiceReadiness()` checks services from inside instances via curl localhost
+  - `SSMClient.WaitForSSMAgent()` waits for SSM agent availability before commands
+  - `PollServiceReadinessViaSSM()` in `pkg/readiness/poller.go` with progress callbacks
+  - Works regardless of security group configuration (no external port access needed)
+  - Uses existing IAM instance profiles for SSM access
+  - Typically ready in 5-10 seconds for SSM agent, 2-3 minutes for service
+- **Progress streaming enhancements**: Real-time cloud-init status during launch
+  - Concurrent SSH-based progress streaming with SSM readiness polling
+  - Displays cloud-init logs every 20 seconds during instance setup
+  - Shows service readiness progress with elapsed time
+  - Enhanced user experience with clear status updates
 - **aws-vscode**: New VSCode Server (code-server) CLI tool (beta)
   - Complete CLI structure with all subcommands (launch, list, connect, stop, start, terminate, status, env, key)
   - **Full launch command implementation** with all features:
@@ -37,6 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All tests use isolated temp directories with proper cleanup
 
 ### Changed
+- **All apps migrated to SSM-based readiness polling** (VSCode, Jupyter, RStudio)
+  - `apps/vscode/internal/cli/launch.go`: Uses PollServiceReadinessViaSSM on port 8080
+  - `apps/jupyter/internal/cli/launch.go`: Uses PollServiceReadinessViaSSM on port 8888
+  - `apps/rstudio/internal/cli/launch.go`: Uses PollServiceReadinessViaSSM on port 8787
+  - All apps now check service readiness from inside the instance via SSM
+  - No longer depends on externally accessible service ports for health checks
+  - More secure launch process with reduced security group exposure
 - Updated root README to include aws-vscode
 - Updated project roadmap to reflect aws-vscode alpha status
 

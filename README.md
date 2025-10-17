@@ -14,6 +14,7 @@ AWS IDE is a monorepo containing multiple CLI tools for managing different cloud
 
 ### 🔒 Security & Access Control
 - **Session Manager**: Secure access without SSH keys or bastion hosts
+- **SSM-based Readiness Polling**: Health checks from inside instances without exposed ports
 - **Traditional SSH**: Full SSH key management with economical reuse strategy
 - **Private Subnets**: Enterprise-grade isolation with optional NAT Gateway
 - **Smart Security Groups**: Automatic firewall rules with IP restrictions
@@ -79,6 +80,29 @@ aws-jupyter launch --connection session-manager
 # Launch with custom timeout
 aws-jupyter launch --idle-timeout 2h
 ```
+
+## How It Works: SSM-Based Readiness Polling
+
+AWS IDE uses AWS Systems Manager (SSM) for secure, agentless service health checks during instance launch:
+
+**The Problem**: Traditional health checks require exposing service ports through security groups, creating security risks and complexity.
+
+**The Solution**: SSM-based polling checks service health from **inside** the instance using AWS Systems Manager:
+
+1. Launch instance with IAM instance profile (SSM access included)
+2. Wait for SSM agent to come online (typically 5-10 seconds)
+3. Execute `curl localhost:<port>` commands via SSM to check service readiness
+4. Display real-time progress with cloud-init logs streamed via SSH
+5. Report when service is ready (typically 2-3 minutes total)
+
+**Benefits**:
+- Works regardless of security group configuration
+- No need to expose service ports externally for testing
+- More secure launch process with reduced attack surface
+- Unified health checking across all IDE types (VSCode, Jupyter, RStudio)
+- Real-time progress visibility with concurrent progress streaming
+
+All three apps (aws-jupyter, aws-rstudio, aws-vscode) use this approach by default.
 
 ## Applications
 

@@ -41,6 +41,18 @@ Complete the monorepo migration and establish RStudio as a first-class citizen a
 - [x] Update CI/CD for monorepo structure
 - [x] Remove legacy code and duplication
 - [x] Update documentation for monorepo
+- [x] **SSM-based readiness polling** for secure service health checks
+  - [x] Created pkg/aws/ssm.go with SSMClient implementation
+  - [x] Added PollServiceReadinessViaSSM() to pkg/readiness/poller.go
+  - [x] Migrated VSCode to SSM polling (port 8080)
+  - [x] Migrated Jupyter to SSM polling (port 8888)
+  - [x] Migrated RStudio to SSM polling (port 8787)
+  - [x] All apps tested end-to-end with SSM readiness checks
+  - [x] Works regardless of security group configuration
+- [x] **Progress streaming improvements**
+  - [x] Real-time cloud-init progress via SSH
+  - [x] Concurrent progress streaming and SSM polling
+  - [x] Enhanced user experience during launch
 
 **In Progress:**
 - [ ] RStudio Feature Parity
