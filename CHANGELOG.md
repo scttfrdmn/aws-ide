@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **aws-rstudio Feature Parity**: Complete command set matching aws-jupyter
+  - All 10 CLI commands implemented (launch, list, status, connect, stop, start, terminate, env, key, generate)
+  - 4 R-specific environments: minimal, tidyverse, bioconductor, shiny
+  - 27 unit tests (933 lines) covering env, generate, list, and launch commands
+  - Environment management (env list, env show) fully functional
+  - Key management (key list, key show, key validate) working
+  - Cost optimization with idle detection and configurable timeouts
+  - SSH and Session Manager connection methods
+  - Public/private subnet support with NAT Gateway
+  - Enhanced README reflecting v0.5.0 capabilities
+- **Shared Infrastructure Testing**: Value-focused test strategy
+  - Unit tests for pkg/cli utilities (formatDuration, cleanupStateFile) - 14 tests, 276 lines
+  - pkg/config already at 84.7% coverage with comprehensive tests
+  - Integration tests with LocalStack for AWS API validation
+  - E2E tests for all 3 IDE types (Jupyter, RStudio, VSCode)
+  - Proper testing pyramid: unit → integration → E2E
+  - Focus on testing value over arbitrary coverage metrics
 - **SSM-based readiness polling**: Secure service health checking without exposed ports
   - New `pkg/aws/ssm.go` module with SSMClient for AWS Systems Manager operations
   - `SSMClient.CheckServiceReadiness()` checks services from inside instances via curl localhost
@@ -48,6 +65,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - state_test.go: State management, save/load cycles with 11 test functions
   - keys_test.go: SSH key storage, permissions, cleanup with 29 test functions
   - All tests use isolated temp directories with proper cleanup
+
+### Fixed
+- **aws-rstudio**: Port hardcoded incorrectly in list.go (was 8888, now correctly 8787)
+  - RStudio uses port 8787, not Jupyter's port 8888
+  - Fixed during unit test development
 
 ### Changed
 - **All apps migrated to SSM-based readiness polling** (VSCode, Jupyter, RStudio)
