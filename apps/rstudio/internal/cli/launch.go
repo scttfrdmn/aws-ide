@@ -266,7 +266,7 @@ func setupInstanceProfile(ctx context.Context, profile string) (*aws.InstancePro
 		return nil, fmt.Errorf("failed to create IAM client: %w", err)
 	}
 
-	instanceProfile, err := iamClient.GetOrCreateSessionManagerRole(ctx)
+	instanceProfile, err := iamClient.GetOrCreateSessionManagerRole(ctx, "aws-rstudio")
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup Session Manager role: %w", err)
 	}

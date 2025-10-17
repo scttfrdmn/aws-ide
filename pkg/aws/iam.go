@@ -55,9 +55,10 @@ const SessionManagerTrustPolicy = `{
 }`
 
 // GetOrCreateSessionManagerRole creates or gets the IAM role for Session Manager
-func (i *IAMClient) GetOrCreateSessionManagerRole(ctx context.Context) (*InstanceProfileInfo, error) {
-	roleName := "aws-jupyter-session-manager-role"
-	instanceProfileName := "aws-jupyter-session-manager-profile"
+// appPrefix should be "aws-jupyter", "aws-vscode", "aws-rstudio", etc.
+func (i *IAMClient) GetOrCreateSessionManagerRole(ctx context.Context, appPrefix string) (*InstanceProfileInfo, error) {
+	roleName := appPrefix + "-session-manager-role"
+	instanceProfileName := appPrefix + "-session-manager-profile"
 
 	// Check if role exists
 	roleExists, err := i.roleExists(ctx, roleName)
@@ -68,18 +69,18 @@ func (i *IAMClient) GetOrCreateSessionManagerRole(ctx context.Context) (*Instanc
 	if !roleExists {
 		// Create the role
 		fmt.Printf("Creating IAM role: %s\n", roleName)
-		if err := i.createRole(ctx, roleName); err != nil {
+		if err := i.createRole(ctx, roleName, appPrefix); err != nil {
 			return nil, fmt.Errorf("failed to create role: %w", err)
 		}
 
 		// Attach the Session Manager policy
-		if err := i.attachSessionManagerPolicy(ctx, roleName); err != nil {
+		if err := i.attachSessionManagerPolicy(ctx, roleName, appPrefix); err != nil {
 			return nil, fmt.Errorf("failed to attach Session Manager policy: %w", err)
 		}
 	} else {
 		fmt.Printf("Using existing IAM role: %s\n", roleName)
 		// Ensure auto-stop policy is attached to existing role (for backwards compatibility)
-		if err := i.ensureAutoStopPolicy(ctx, roleName); err != nil {
+		if err := i.ensureAutoStopPolicy(ctx, roleName, appPrefix); err != nil {
 			fmt.Printf("Warning: Failed to ensure auto-stop policy: %v\n", err)
 		}
 	}
@@ -93,7 +94,7 @@ func (i *IAMClient) GetOrCreateSessionManagerRole(ctx context.Context) (*Instanc
 	if !profileExists {
 		// Create instance profile
 		fmt.Printf("Creating instance profile: %s\n", instanceProfileName)
-		profileInfo, err = i.createInstanceProfile(ctx, instanceProfileName, roleName)
+		profileInfo, err = i.createInstanceProfile(ctx, instanceProfileName, roleName, appPrefix)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create instance profile: %w", err)
 		}
@@ -120,15 +121,15 @@ func (i *IAMClient) roleExists(ctx context.Context, roleName string) (bool, erro
 }
 
 // createRole creates a new IAM role
-func (i *IAMClient) createRole(ctx context.Context, roleName string) error {
+func (i *IAMClient) createRole(ctx context.Context, roleName, appPrefix string) error {
 	_, err := i.client.CreateRole(ctx, &iam.CreateRoleInput{
 		RoleName:                 aws.String(roleName),
 		AssumeRolePolicyDocument: aws.String(SessionManagerTrustPolicy),
-		Description:              aws.String("IAM role for aws-jupyter instances with Session Manager access"),
+		Description:              aws.String("IAM role for " + appPrefix + " instances with Session Manager access"),
 		Tags: []types.Tag{
 			{
 				Key:   aws.String("CreatedBy"),
-				Value: aws.String("aws-jupyter-cli"),
+				Value: aws.String(appPrefix + "-cli"),
 			},
 			{
 				Key:   aws.String("Purpose"),
@@ -140,7 +141,7 @@ func (i *IAMClient) createRole(ctx context.Context, roleName string) error {
 }
 
 // attachSessionManagerPolicy attaches the Session Manager policy to the role
-func (i *IAMClient) attachSessionManagerPolicy(ctx context.Context, roleName string) error {
+func (i *IAMClient) attachSessionManagerPolicy(ctx context.Context, roleName, appPrefix string) error {
 	// Attach AWS managed policy for Session Manager
 	policyArn := "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 
@@ -163,7 +164,7 @@ func (i *IAMClient) attachSessionManagerPolicy(ctx context.Context, roleName str
 	}
 
 	// Add inline policy for auto-stop (allows instance to stop itself)
-	if err := i.attachAutoStopPolicy(ctx, roleName); err != nil {
+	if err := i.attachAutoStopPolicy(ctx, roleName, appPrefix); err != nil {
 		fmt.Printf("Warning: Failed to attach auto-stop policy (non-critical): %v\n", err)
 	}
 
@@ -171,8 +172,8 @@ func (i *IAMClient) attachSessionManagerPolicy(ctx context.Context, roleName str
 }
 
 // attachAutoStopPolicy attaches an inline policy allowing the instance to stop itself
-func (i *IAMClient) attachAutoStopPolicy(ctx context.Context, roleName string) error {
-	policyDoc := `{
+func (i *IAMClient) attachAutoStopPolicy(ctx context.Context, roleName, appPrefix string) error {
+	policyDoc := fmt.Sprintf(`{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -186,16 +187,16 @@ func (i *IAMClient) attachAutoStopPolicy(ctx context.Context, roleName string) e
             "Resource": "*",
             "Condition": {
                 "StringEquals": {
-                    "ec2:ResourceTag/CreatedBy": "aws-jupyter-cli"
+                    "ec2:ResourceTag/CreatedBy": "%s-cli"
                 }
             }
         }
     ]
-}`
+}`, appPrefix)
 
 	_, err := i.client.PutRolePolicy(ctx, &iam.PutRolePolicyInput{
 		RoleName:       aws.String(roleName),
-		PolicyName:     aws.String("aws-jupyter-auto-stop-policy"),
+		PolicyName:     aws.String(appPrefix + "-auto-stop-policy"),
 		PolicyDocument: aws.String(policyDoc),
 	})
 	if err != nil {
@@ -207,18 +208,18 @@ func (i *IAMClient) attachAutoStopPolicy(ctx context.Context, roleName string) e
 }
 
 // ensureAutoStopPolicy checks if auto-stop policy exists and attaches it if missing
-func (i *IAMClient) ensureAutoStopPolicy(ctx context.Context, roleName string) error {
+func (i *IAMClient) ensureAutoStopPolicy(ctx context.Context, roleName, appPrefix string) error {
 	// Check if the inline policy already exists
 	_, err := i.client.GetRolePolicy(ctx, &iam.GetRolePolicyInput{
 		RoleName:   aws.String(roleName),
-		PolicyName: aws.String("aws-jupyter-auto-stop-policy"),
+		PolicyName: aws.String(appPrefix + "-auto-stop-policy"),
 	})
 
 	if err != nil {
 		var apiErr smithy.APIError
 		if errors.As(err, &apiErr) && apiErr.ErrorCode() == "NoSuchEntity" {
 			// Policy doesn't exist, attach it
-			return i.attachAutoStopPolicy(ctx, roleName)
+			return i.attachAutoStopPolicy(ctx, roleName, appPrefix)
 		}
 		return err
 	}
@@ -256,14 +257,14 @@ func (i *IAMClient) instanceProfileExists(ctx context.Context, profileName strin
 }
 
 // createInstanceProfile creates a new instance profile and adds the role to it
-func (i *IAMClient) createInstanceProfile(ctx context.Context, profileName, roleName string) (*InstanceProfileInfo, error) {
+func (i *IAMClient) createInstanceProfile(ctx context.Context, profileName, roleName, appPrefix string) (*InstanceProfileInfo, error) {
 	// Create the instance profile
 	result, err := i.client.CreateInstanceProfile(ctx, &iam.CreateInstanceProfileInput{
 		InstanceProfileName: aws.String(profileName),
 		Tags: []types.Tag{
 			{
 				Key:   aws.String("CreatedBy"),
-				Value: aws.String("aws-jupyter-cli"),
+				Value: aws.String(appPrefix + "-cli"),
 			},
 			{
 				Key:   aws.String("Purpose"),
