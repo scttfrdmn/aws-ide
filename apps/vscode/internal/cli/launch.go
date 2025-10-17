@@ -6,10 +6,13 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	vscodeconfig "github.com/scttfrdmn/aws-ide/apps/vscode/internal/config"
 	"github.com/scttfrdmn/aws-ide/pkg/aws"
 	"github.com/scttfrdmn/aws-ide/pkg/config"
+	"github.com/scttfrdmn/aws-ide/pkg/readiness"
 	"github.com/spf13/cobra"
 )
 
@@ -453,7 +456,22 @@ func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env
 		return nil, fmt.Errorf("instance failed to start: %w", err)
 	}
 
-	return ec2Client.GetInstanceInfo(ctx, instanceID)
+	// Get updated instance info with IP address
+	instance, err = ec2Client.GetInstanceInfo(ctx, instanceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get instance info: %w", err)
+	}
+
+	// Poll for VSCode Server readiness
+	fmt.Println("⏳ Instance is running, waiting for VSCode Server to be ready...")
+	fmt.Println("   (This typically takes 2-3 minutes for code-server installation)")
+
+	if err := waitForVSCodeReady(ctx, instance); err != nil {
+		fmt.Printf("⚠️  Warning: %v\n", err)
+		fmt.Println("   You can still try connecting - the service may still be starting up.")
+	}
+
+	return instance, nil
 }
 
 // displayVSCodeInfo displays VSCode Server-specific connection information
@@ -613,4 +631,50 @@ func printDryRunActions(env *config.Environment, connectionMethod, subnetType st
 	fmt.Printf("  %d. Save instance state locally\n", actionNum)
 	actionNum++
 	fmt.Printf("  %d. Display connection information\n", actionNum)
+}
+
+// waitForVSCodeReady polls the VSCode Server until it's ready to accept connections
+func waitForVSCodeReady(ctx context.Context, instance *types.Instance) error {
+	// Determine the host to connect to
+	host := ""
+	if instance.PublicIpAddress != nil {
+		host = *instance.PublicIpAddress
+	} else if instance.PrivateIpAddress != nil {
+		host = *instance.PrivateIpAddress
+	} else {
+		return fmt.Errorf("instance has no IP address")
+	}
+
+	// VSCode Server (code-server) runs on port 8080
+	config := readiness.ServiceConfig{
+		Host:    host,
+		Port:    8080,
+		Timeout: 5 * time.Minute, // 5 minutes should be enough for installation
+		Retry:   10 * time.Second, // Check every 10 seconds
+	}
+
+	// Track elapsed time for progress updates
+	startTime := time.Now()
+	lastUpdate := startTime
+
+	callback := func(message string, elapsed time.Duration) {
+		// Only print updates every 20 seconds to avoid spam
+		now := time.Now()
+		if now.Sub(lastUpdate) >= 20*time.Second || strings.Contains(message, "ready") {
+			fmt.Printf("   [%ds] %s\n", int(elapsed.Seconds()), message)
+			lastUpdate = now
+		}
+	}
+
+	result, err := readiness.PollServiceReadiness(ctx, config, callback)
+	if err != nil {
+		return err
+	}
+
+	if result.Ready {
+		fmt.Printf("✓ VSCode Server is ready! (took %v)\n", result.ElapsedTime.Round(time.Second))
+		return nil
+	}
+
+	return fmt.Errorf(result.Message)
 }
