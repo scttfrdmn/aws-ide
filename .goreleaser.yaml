@@ -143,10 +143,11 @@ release:
     See the [CHANGELOG](https://github.com/scttfrdmn/aws-ide/blob/{{ .Tag }}/CHANGELOG.md) for detailed release notes.
 
 # Homebrew formulas for both tools
+# Note: 'brews' is the correct field name for Homebrew tap formulas
 brews:
   - name: aws-jupyter
     ids:
-      - aws-jupyter
+      - jupyter
     repository:
       owner: scttfrdmn
       name: homebrew-tap
@@ -167,7 +168,7 @@ brews:
 
   - name: aws-rstudio
     ids:
-      - aws-rstudio
+      - rstudio
     repository:
       owner: scttfrdmn
       name: homebrew-tap

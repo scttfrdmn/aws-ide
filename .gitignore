@@ -15,7 +15,9 @@
 # vendor/
 
 # Go workspace file
-go.work
+# Note: go.work is committed for monorepo CI builds
+# Only ignore the sum file for local development
+go.work.sum
 
 # IDE files
 .vscode/
