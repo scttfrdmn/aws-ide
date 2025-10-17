@@ -45,7 +45,7 @@ func runList() error {
 		uptime := formatDuration(instance.LaunchedAt)
 		tunnel := ""
 		if instance.TunnelPID > 0 {
-			tunnel = ":8888"
+			tunnel = ":8787"
 		}
 
 		// Get actual instance state from AWS

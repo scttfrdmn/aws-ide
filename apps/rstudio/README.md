@@ -81,15 +81,15 @@ See the [AWS Authentication Guide](../jupyter/docs/AWS_AUTHENTICATION.md) for de
 ### **⚡ Simplest Launch (5 Seconds)**
 
 ```bash
-# Launch with all defaults
+# Launch with all defaults - perfect for getting started
 aws-rstudio launch
 
 # The CLI will:
 # ✓ Configure IAM roles and security groups
-# ✓ Launch an m7g.medium Graviton instance
-# ✓ Install RStudio Server with R packages
+# ✓ Launch a t4g.medium Graviton instance
+# ✓ Install RStudio Server with minimal R environment
 # ✓ Auto-stop after 4 hours of inactivity (saves money!)
-# ✓ Show you the RStudio URL when ready
+# ✓ Show you the RStudio URL when ready (http://...)
 ```
 
 ### **🔐 Secure Launch (Session Manager - Recommended)**
@@ -111,8 +111,8 @@ aws-rstudio launch --connection session-manager
 # Standard SSH with public subnet
 aws-rstudio launch --connection ssh
 
-# SSH with custom instance type
-aws-rstudio launch --instance-type m7g.large --connection ssh
+# SSH with custom environment and instance type
+aws-rstudio launch --env tidyverse --instance-type t4g.large --connection ssh
 ```
 
 ### **💰 Cost Control with Idle Detection**
@@ -125,8 +125,9 @@ aws-rstudio launch --idle-timeout 30m
 aws-rstudio launch --idle-timeout 8h
 
 # Auto-stop detects:
+# ✓ Active R sessions and computation processes
 # ✓ High CPU usage (>10% threshold)
-# ✓ Running R processes
+# ✓ Running RStudio processes
 # ✓ Instance automatically stops when idle to save costs
 ```
 
@@ -155,13 +156,26 @@ aws-rstudio launch --dry-run --connection session-manager --subnet-type private 
 
 ## Environments
 
-Built-in R environments (coming soon):
-- `r-base`: Basic R installation with essentials
-- `tidyverse`: Data science with tidyverse, dplyr, ggplot2
-- `bioconductor`: Bioinformatics with Bioconductor packages
-- `machine-learning`: ML with caret, tidymodels, keras
-- `stats`: Statistical analysis with advanced packages
-- `shiny`: Shiny app development environment
+Built-in R environments:
+- `minimal`: Basic R installation with rmarkdown (t4g.small, 20GB)
+- `tidyverse`: Modern data science with tidyverse, dplyr, ggplot2 (t4g.medium, 30GB)
+- `bioconductor`: Bioinformatics with DESeq2, edgeR, GenomicRanges (t4g.large, 50GB)
+- `shiny`: Interactive web applications with Shiny, plotly, leaflet (t4g.medium, 30GB)
+
+### Generating Custom Environments
+
+Create custom R environments from your local setup:
+
+```bash
+# List available environments
+aws-rstudio env list
+
+# View environment details
+aws-rstudio env show tidyverse
+
+# Generate custom environment (coming soon)
+aws-rstudio generate --name my-rproject --source ./research
+```
 
 ## 🔗 Connection Methods
 
@@ -248,7 +262,9 @@ aws-rstudio launch \
   --connection session-manager \
   --subnet-type private \
   --create-nat-gateway \
-  --instance-type m7g.xlarge \
+  --env bioconductor \
+  --instance-type t4g.xlarge \
+  --idle-timeout 8h \
   --profile production \
   --region us-east-1
 ```
@@ -278,29 +294,33 @@ See the main [README](../../README.md#aws-permissions) for required AWS permissi
 
 ## Development Status
 
-**Current Version**: v0.1.0 (Basic implementation)
+**Current Version**: v0.5.0 (Feature Parity - In Progress)
 
-aws-rstudio is currently in early development. Core features work, but it's not yet at feature parity with [aws-jupyter](../jupyter/).
+aws-rstudio is rapidly approaching feature parity with [aws-jupyter](../jupyter/). Most core features are implemented and tested.
 
 ### ✅ Working Features
-- Basic launch command
-- Instance lifecycle (start, stop, terminate)
-- SSH and Session Manager connection methods
-- Public/private subnet support
-- Basic commands (list, status, connect)
+- **Full CLI command set**: All 10 commands implemented
+  - Launch, connect, stop, terminate, status, list
+  - Environment management (env list, env show)
+  - Key management (key list, key show, key validate)
+- **Environment system**: 4 R-specific environments (minimal, tidyverse, bioconductor, shiny)
+- **Connection methods**: SSH and Session Manager fully supported
+- **Networking**: Public/private subnet support with NAT Gateway
+- **Security**: IAM roles, security groups, automatic firewall rules
+- **Cost optimization**: Idle detection and auto-stop with configurable timeouts
+- **Test coverage**: 27 unit tests across env, generate, list, and launch commands
 
 ### 🚧 In Development (v0.5.0 - Q1 2025)
-- R-specific environment system
-- Custom environment generation
-- RStudio-specific user data scripts
-- Complete test coverage
+- Custom environment generation command
+- RStudio-specific user data script enhancements
+- Additional R package management features
 - Documentation expansion
 
 ### 📋 Planned (v0.6.0+)
-- Feature parity with aws-jupyter
-- R package management
-- Shiny app support
-- Environment templates
+- Integration and E2E testing for RStudio-specific workflows
+- Enhanced idle detection for R processes
+- Shiny app port configuration
+- R environment templates library
 
 See the [ROADMAP](../../ROADMAP.md) for detailed planning.
 
