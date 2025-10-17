@@ -2,12 +2,14 @@
 
 This directory contains the Scoop manifest for aws-jupyter.
 
+**Note:** aws-jupyter is now part of the [AWS IDE monorepo](https://github.com/scttfrdmn/aws-ide). The binary and functionality remain unchanged.
+
 ## For Users
 
 Install aws-jupyter via Scoop:
 
 ```powershell
-scoop install https://raw.githubusercontent.com/scttfrdmn/aws-jupyter/main/scoop/aws-jupyter.json
+scoop install https://raw.githubusercontent.com/scttfrdmn/aws-ide/main/scoop/aws-jupyter.json
 ```
 
 Or after it's added to the main bucket:
