@@ -3,13 +3,16 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	rstudioconfig "github.com/scttfrdmn/aws-ide/apps/rstudio/internal/config"
 	"github.com/scttfrdmn/aws-ide/pkg/aws"
 	"github.com/scttfrdmn/aws-ide/pkg/config"
+	"github.com/scttfrdmn/aws-ide/pkg/readiness"
 	"github.com/spf13/cobra"
 )
 
@@ -455,7 +458,30 @@ func launchAndWaitForInstance(ctx context.Context, ec2Client *aws.EC2Client, env
 		return nil, fmt.Errorf("instance failed to start: %w", err)
 	}
 
-	return ec2Client.GetInstanceInfo(ctx, instanceID)
+	// Get updated instance info
+	instance, err = ec2Client.GetInstanceInfo(ctx, instanceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get instance info: %w", err)
+	}
+
+	// Poll for RStudio Server readiness with progress streaming
+	fmt.Println("⏳ Instance is running, waiting for RStudio Server to be ready...")
+	fmt.Println("   (This typically takes 2-3 minutes for environment setup)")
+	fmt.Println()
+
+	// Try to stream progress if we have SSH access
+	progressDone := make(chan bool)
+	go streamSetupProgress(ctx, instance, keyInfo, progressDone)
+
+	if err := waitForRStudioReady(ctx, instance); err != nil {
+		close(progressDone) // Stop progress streaming
+		fmt.Printf("\n⚠️  Warning: %v\n", err)
+		fmt.Println("   You can still try connecting - the service may still be starting up.")
+	} else {
+		close(progressDone) // Stop progress streaming
+	}
+
+	return instance, nil
 }
 
 // displayInstanceInfo shows the launched instance information and saves to state
@@ -623,4 +649,114 @@ func printDryRunActions(env *config.Environment, connectionMethod, subnetType st
 	fmt.Printf("  %d. Save instance state locally\n", actionNum)
 	actionNum++
 	fmt.Printf("  %d. Display connection information\n", actionNum)
+}
+
+// streamSetupProgress streams setup progress by tailing the progress log via SSH
+func streamSetupProgress(ctx context.Context, instance *types.Instance, keyInfo *aws.KeyPairInfo, done chan bool) {
+	// Can only stream progress if we have SSH access
+	if keyInfo == nil || instance.PublicIpAddress == nil {
+		return
+	}
+
+	host := *instance.PublicIpAddress
+	keyStorage, err := config.DefaultKeyStorage()
+	if err != nil {
+		return
+	}
+
+	keyPath := keyStorage.GetKeyPath(keyInfo.Name)
+
+	// Wait a bit for instance to be accessible and log file to be created
+	time.Sleep(30 * time.Second)
+
+	// Tail the progress log
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	lastLine := ""
+	seenSteps := make(map[string]bool)
+
+	for {
+		select {
+		case <-done:
+			return
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Try to read the progress log via SSH
+			cmd := fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=no -o ConnectTimeout=3 -o BatchMode=yes ubuntu@%s 'tail -20 /var/log/setup-progress.log 2>/dev/null || echo \"\"' 2>/dev/null",
+				keyPath, host)
+
+			output, err := exec.CommandContext(ctx, "bash", "-c", cmd).Output()
+			if err != nil {
+				continue
+			}
+
+			lines := strings.Split(string(output), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" || line == lastLine {
+					continue
+				}
+
+				if strings.HasPrefix(line, "STEP:") {
+					step := strings.TrimPrefix(line, "STEP:")
+					if !seenSteps[step] {
+						fmt.Printf("   📋 %s\n", step)
+						seenSteps[step] = true
+					}
+				} else if line == "COMPLETE" {
+					fmt.Println("   ✅ Setup complete!")
+					return
+				}
+				lastLine = line
+			}
+		}
+	}
+}
+
+// waitForRStudioReady polls RStudio Server until it's ready to accept connections
+func waitForRStudioReady(ctx context.Context, instance *types.Instance) error {
+	// Determine the host to connect to
+	host := ""
+	if instance.PublicIpAddress != nil {
+		host = *instance.PublicIpAddress
+	} else if instance.PrivateIpAddress != nil {
+		host = *instance.PrivateIpAddress
+	} else {
+		return fmt.Errorf("instance has no IP address")
+	}
+
+	// RStudio Server runs on port 8787
+	config := readiness.ServiceConfig{
+		Host:    host,
+		Port:    8787,
+		Timeout: 5 * time.Minute, // 5 minutes should be enough for installation
+		Retry:   10 * time.Second, // Check every 10 seconds
+	}
+
+	// Track elapsed time for progress updates
+	startTime := time.Now()
+	lastUpdate := startTime
+
+	callback := func(message string, elapsed time.Duration) {
+		// Only print updates every 20 seconds to avoid spam
+		now := time.Now()
+		if now.Sub(lastUpdate) >= 20*time.Second || strings.Contains(message, "ready") {
+			fmt.Printf("   [%ds] %s\n", int(elapsed.Seconds()), message)
+			lastUpdate = now
+		}
+	}
+
+	result, err := readiness.PollServiceReadiness(ctx, config, callback)
+	if err != nil {
+		return err
+	}
+
+	if result.Ready {
+		fmt.Printf("✓ RStudio Server is ready! (took %v)\n", result.ElapsedTime.Round(time.Second))
+		return nil
+	}
+
+	return fmt.Errorf(result.Message)
 }

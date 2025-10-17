@@ -29,24 +29,35 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("exec > >(tee /var/log/user-data.log)\n")
 	sb.WriteString("exec 2>&1\n\n")
 
-	sb.WriteString("echo 'Starting aws-rstudio environment setup'\n")
+	// Create progress log file
+	sb.WriteString("# Setup progress tracking\n")
+	sb.WriteString("PROGRESS_LOG=\"/var/log/setup-progress.log\"\n")
+	sb.WriteString("touch $PROGRESS_LOG\n")
+	sb.WriteString("chmod 644 $PROGRESS_LOG\n\n")
+
+	sb.WriteString("log_progress() {\n")
+	sb.WriteString("  echo \"STEP:$1\" | tee -a $PROGRESS_LOG\n")
+	sb.WriteString("}\n\n")
+
+	sb.WriteString("log_progress 'Starting aws-rstudio environment setup'\n")
 	sb.WriteString("echo 'Environment: " + env.Name + "'\n\n")
 
 	// Update system
 	sb.WriteString("# Update system packages\n")
+	sb.WriteString("log_progress 'Updating system packages'\n")
 	sb.WriteString("apt-get update -y\n")
 	sb.WriteString("apt-get upgrade -y\n\n")
 
 	// Install SSM Agent
 	sb.WriteString("# Install AWS Systems Manager Agent\n")
-	sb.WriteString("echo 'Installing SSM Agent...'\n")
+	sb.WriteString("log_progress 'Installing SSM Agent'\n")
 	sb.WriteString("snap install amazon-ssm-agent --classic\n")
 	sb.WriteString("systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service\n")
 	sb.WriteString("systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service\n\n")
 
 	// Install R and RStudio Server
 	sb.WriteString("# Install R and RStudio Server\n")
-	sb.WriteString("echo 'Installing R...'\n")
+	sb.WriteString("log_progress 'Installing R'\n")
 	sb.WriteString("apt-get install -y --no-install-recommends software-properties-common dirmngr\n")
 	sb.WriteString("wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc\n")
 	sb.WriteString("add-apt-repository \"deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/\"\n")
@@ -56,7 +67,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install system packages
 	if len(env.Packages) > 0 {
 		sb.WriteString("# Install system packages\n")
-		sb.WriteString("echo 'Installing system packages...'\n")
+		sb.WriteString("log_progress 'Installing system packages'\n")
 		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get install -y \\\n")
 		for i, pkg := range env.Packages {
 			if i == len(env.Packages)-1 {
@@ -69,7 +80,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 
 	// Install RStudio Server
 	sb.WriteString("# Install RStudio Server\n")
-	sb.WriteString("echo 'Installing RStudio Server...'\n")
+	sb.WriteString("log_progress 'Installing RStudio Server'\n")
 	sb.WriteString("wget -q https://download2.rstudio.org/server/jammy/arm64/rstudio-server-2024.09.1-394-arm64.deb\n")
 	sb.WriteString("apt-get install -y gdebi-core\n")
 	sb.WriteString("gdebi -n rstudio-server-2024.09.1-394-arm64.deb\n")
@@ -78,7 +89,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	// Install R packages
 	if len(env.RPackages) > 0 {
 		sb.WriteString("# Install R packages\n")
-		sb.WriteString("echo 'Installing R packages...'\n")
+		sb.WriteString("log_progress 'Installing R packages'\n")
 		sb.WriteString("R -e \"install.packages(c(")
 		for i, pkg := range env.RPackages {
 			if i > 0 {
@@ -94,7 +105,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 		sb.WriteString("# Setup Python and pip\n")
 		sb.WriteString("python3 -m pip install --upgrade pip setuptools wheel\n\n")
 		sb.WriteString("# Install Python packages\n")
-		sb.WriteString("echo 'Installing Python packages...'\n")
+		sb.WriteString("log_progress 'Installing Python packages'\n")
 		sb.WriteString("python3 -m pip install \\\n")
 		for i, pkg := range env.PipPackages {
 			if i == len(env.PipPackages)-1 {
@@ -143,6 +154,7 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 
 	// Restart RStudio Server
 	sb.WriteString("# Restart RStudio Server\n")
+	sb.WriteString("log_progress 'Starting RStudio Server service'\n")
 	sb.WriteString("systemctl restart rstudio-server\n")
 	sb.WriteString("systemctl enable rstudio-server\n\n")
 
@@ -171,6 +183,8 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("echo 'Idle detection system installed and enabled'\n\n")
 
 	// Final status
+	sb.WriteString("log_progress 'Setup complete - RStudio Server is ready'\n")
+	sb.WriteString("echo 'COMPLETE' >> $PROGRESS_LOG\n")
 	sb.WriteString("echo 'aws-rstudio environment setup complete!'\n")
 	sb.WriteString("echo 'RStudio Server is running on port 8787'\n")
 	sb.WriteString("echo 'Default login: ubuntu / rstudio'\n")
