@@ -24,11 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 4 built-in environments: web-dev (default), python-dev, go-dev, fullstack
   - Automatic language runtime installation (Node.js 20, Python 3, Go 1.22)
   - VSCode extension auto-installation system
-  - Ubuntu 24.04 Noble LTS base OS
+  - Ubuntu 22.04 Jammy LTS base OS
   - Idle detection and auto-stop system
   - SSH tunnel and Session Manager port forwarding support
   - Comprehensive README with quick start and troubleshooting
-  - Ready for real-world testing
+  - **Tested end-to-end**: Successfully launched instance i-0da4fbcff0a97dc0a
 - Added apps/vscode to Go workspace
 - Comprehensive test suite for pkg/config module (84.7% coverage)
   - environment_test.go: Environment loading, validation, listing with 7 test functions
@@ -44,6 +44,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - golangci-lint errcheck violations in pkg/cli/delete-ami.go
 - golangci-lint errcheck violation in pkg/config/environment_test.go
 - All code now passes golangci-lint with zero issues
+- **IAM instance profile naming conflict**: Each app now creates app-specific IAM resources
+  - pkg/aws/iam.go: GetOrCreateSessionManagerRole() now accepts appPrefix parameter
+  - Apps create separate roles: aws-jupyter-*, aws-vscode-*, aws-rstudio-*
+  - Allows multiple IDE types to coexist without IAM resource conflicts
+
+### Known Issues
+- **aws-vscode**: code-server installation fails in cloud-init (HOME not set)
+  - User-data script needs to be run as specific user, not root
+  - Workaround: Manual installation after instance launch
 
 ## [0.5.0] - 2025-01-16
 
