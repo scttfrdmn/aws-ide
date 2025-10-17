@@ -1,0 +1,119 @@
+version: 2
+
+project_name: aws-rstudio
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: aws-rstudio
+    main: ./cmd/aws-rstudio
+    binary: aws-rstudio
+    dir: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: rstudio
+    builds:
+      - aws-rstudio
+    name_template: >-
+      aws-rstudio_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - ../../LICENSE
+      - ../../README.md
+      - ../../CHANGELOG.md
+      - README.md
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: 'aws-rstudio_checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - '^build:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(rstudio\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\(rstudio\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: scttfrdmn
+    name: aws-ide
+  draft: false
+  prerelease: auto
+  mode: append
+  name_template: "aws-rstudio {{.Version}}"
+  header: |
+    ## aws-rstudio {{.Version}} ({{ .Date }})
+
+    CLI tool for launching RStudio Server instances on AWS EC2 Graviton processors.
+
+    ### What's Changed in aws-rstudio
+  footer: |
+    ## Installation
+
+    ### Homebrew (macOS/Linux)
+    ```bash
+    brew install scttfrdmn/tap/aws-rstudio
+    ```
+
+    ### Direct Download
+    Download the appropriate binary for your platform from the assets above.
+
+    See the [CHANGELOG](https://github.com/scttfrdmn/aws-ide/blob/{{.Tag}}/CHANGELOG.md) for detailed release notes.
+
+brews:
+  - name: aws-rstudio
+    ids:
+      - rstudio
+    repository:
+      owner: scttfrdmn
+      name: homebrew-tap
+    homepage: https://github.com/scttfrdmn/aws-ide
+    description: CLI tool for launching RStudio Server instances on AWS EC2 Graviton processors
+    license: Apache-2.0
+    folder: Formula
+    install: |
+      bin.install "aws-rstudio"
+    test: |
+      system "#{bin}/aws-rstudio", "--version"

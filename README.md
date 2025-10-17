@@ -159,6 +159,18 @@ aws-jupyter launch --profile myprofile
 
 See the [Jupyter AWS Authentication Guide](apps/jupyter/docs/AWS_AUTHENTICATION.md) for detailed setup instructions.
 
+## Versioning
+
+AWS IDE uses **independent versioning** for each app. Each tool has its own version number and release schedule.
+
+- **aws-jupyter**: v0.5.0 (stable)
+- **aws-vscode**: v0.1.0 (alpha)
+- **aws-rstudio**: v0.5.0 (beta)
+
+Releases use app-prefixed Git tags: `jupyter/v0.5.0`, `vscode/v0.1.0`, etc.
+
+See [VERSIONING.md](VERSIONING.md) for detailed versioning strategy and release process.
+
 ## Development
 
 ### Prerequisites
