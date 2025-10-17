@@ -49,3 +49,7 @@ tmp/localstack/
 coverage.out
 coverage.html
 *.test.log
+
+# Environment variables
+.env
+.env.local
