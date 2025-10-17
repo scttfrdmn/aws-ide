@@ -49,13 +49,14 @@ test-integration: ## Run integration tests with mocked AWS services (requires lo
 test-smoke: ## Run smoke tests against real AWS (requires AWS credentials)
 	@echo "Running smoke tests..."
 	@echo "Note: Smoke tests will create real AWS resources and may incur costs"
+	@echo "Note: Using AWS_PROFILE=aws (set AWS_PROFILE to override)"
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		cd $(PKG_DIR) && $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
-		cd $(APPS_DIR)/jupyter && $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
-		cd $(APPS_DIR)/rstudio && $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
-		cd $(APPS_DIR)/vscode && $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
+		cd $(PKG_DIR) && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
+		cd $(APPS_DIR)/jupyter && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
+		cd $(APPS_DIR)/rstudio && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
+		cd $(APPS_DIR)/vscode && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=smoke -timeout $(TEST_TIMEOUT) ./...; \
 		echo "✓ All smoke tests passed"; \
 	else \
 		echo "Smoke tests cancelled"; \
@@ -64,13 +65,14 @@ test-smoke: ## Run smoke tests against real AWS (requires AWS credentials)
 test-e2e: ## Run end-to-end tests (full launch → connect → terminate flow)
 	@echo "Running end-to-end tests..."
 	@echo "Note: E2E tests will create real AWS resources and may incur costs"
+	@echo "Note: Using AWS_PROFILE=aws (set AWS_PROFILE to override)"
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		cd $(PKG_DIR) && $(GOTEST) -tags=e2e -timeout 30m ./...; \
-		cd $(APPS_DIR)/jupyter && $(GOTEST) -tags=e2e -timeout 30m ./...; \
-		cd $(APPS_DIR)/rstudio && $(GOTEST) -tags=e2e -timeout 30m ./...; \
-		cd $(APPS_DIR)/vscode && $(GOTEST) -tags=e2e -timeout 30m ./...; \
+		cd $(PKG_DIR) && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=e2e -timeout 30m ./...; \
+		cd $(APPS_DIR)/jupyter && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=e2e -timeout 30m ./...; \
+		cd $(APPS_DIR)/rstudio && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=e2e -timeout 30m ./...; \
+		cd $(APPS_DIR)/vscode && AWS_PROFILE=$${AWS_PROFILE:-aws} $(GOTEST) -tags=e2e -timeout 30m ./...; \
 		echo "✓ All E2E tests passed"; \
 	else \
 		echo "E2E tests cancelled"; \
