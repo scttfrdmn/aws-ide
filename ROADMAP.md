@@ -104,23 +104,16 @@ Establish comprehensive testing infrastructure with unit, integration, and E2E t
   - [x] Tests for CommandResult struct, ServiceConfig, polling configuration
 
 - [x] **Integration Tests with LocalStack**
-  - [x] pkg/aws/ec2_integration_test.go (110 lines)
+  - [x] pkg/aws/ec2_integration_test.go (602 lines, 12 test functions)
   - [x] Tests for EC2Client and SSMClient initialization
   - [x] Verified LocalStack compatibility
   - [x] Integration tests run with `make test-integration`
-
-- [x] **Documentation**
-  - [x] Updated TESTING.md with LocalStack setup instructions
-  - [x] Documented testing strategy pyramid (unit → integration → smoke → E2E)
-  - [x] Added LocalStack vs Moto comparison
-  - [x] Documented SSM readiness polling end-to-end test results
-
-**In Progress:**
-- [ ] **Expand Integration Tests**
-  - [ ] Add integration tests for EC2 LaunchInstance
-  - [ ] Add integration tests for IAM role creation
-  - [ ] Add integration tests for AMI operations
-  - [ ] Test error handling paths
+  - [x] EC2 LaunchInstance tests (valid params, auto-subnet, invalid params)
+  - [x] Instance operations tests (start/stop/terminate/get info)
+  - [x] AMI operations tests (create/list/delete)
+  - [x] IAM role tests (GetOrCreateSessionManagerRole with idempotency)
+  - [x] Error handling tests (non-existent resources, invalid params)
+  - [x] AMI selector integration tests (multiple OS/arch combinations)
 
 - [x] **Smoke Tests (Quick Real AWS Validation)**
   - [x] pkg/aws/ec2_smoke_test.go (370 lines, 7 test functions)
@@ -134,12 +127,25 @@ Establish comprehensive testing infrastructure with unit, integration, and E2E t
   - [x] All tests passing with AWS_PROFILE=aws
   - [x] Run with `make test-smoke`
 
-- [ ] **End-to-End Tests**
-  - [ ] Complete launch → connect → terminate flow (Jupyter)
-  - [ ] Complete launch → connect → terminate flow (RStudio)
-  - [ ] Complete launch → connect → terminate flow (VSCode)
-  - [ ] Test SSH vs Session Manager connection methods
-  - [ ] Test environment generation and customization
+- [x] **End-to-End Tests**
+  - [x] pkg/e2etest/helpers.go (500+ lines) - Shared E2E test infrastructure
+  - [x] Complete launch → connect → terminate flow (Jupyter) - 4 test functions
+  - [x] Complete launch → connect → terminate flow (RStudio) - 4 test functions
+  - [x] Complete launch → connect → terminate flow (VSCode) - 5 test functions
+  - [x] Test Session Manager connection methods (UseSessionMgr flag)
+  - [x] Test environment generation and customization (MultipleEnvironments tests)
+  - [x] Instance lifecycle testing (stop/start operations)
+  - [x] Multi-architecture testing (ARM64 Graviton + x86)
+  - [x] Custom port configuration testing
+  - [x] SSM-based readiness polling (no security group dependency)
+  - [x] Automatic cleanup with defer statements
+  - [x] Run with `make test-e2e`
+
+- [x] **Documentation**
+  - [x] Updated TESTING.md with LocalStack setup instructions
+  - [x] Documented testing strategy pyramid (unit → integration → smoke → E2E)
+  - [x] Added LocalStack vs Moto comparison
+  - [x] Documented SSM readiness polling end-to-end test results
 
 **Current Coverage Status:**
 - pkg/aws: 2.5% (struct tests only; most functions require AWS/LocalStack)
@@ -160,8 +166,8 @@ Establish comprehensive testing infrastructure with unit, integration, and E2E t
 - ✅ LocalStack integration working
 - ✅ Unit tests for testable modules
 - ✅ Smoke tests for quick validation
-- ⏳ Integration tests covering major AWS operations
-- ⏳ E2E tests for all three apps (Jupyter, RStudio, VSCode)
+- ✅ Integration tests covering major AWS operations
+- ✅ E2E tests for all three apps (Jupyter, RStudio, VSCode)
 - ⏳ CI/CD running unit + integration tests automatically
 
 ---
