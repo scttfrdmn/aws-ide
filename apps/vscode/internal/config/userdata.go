@@ -195,8 +195,23 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("# Setup idle detection and auto-stop system\n")
 	sb.WriteString("echo 'Setting up idle detection...'\n\n")
 
-	// Install jq for JSON parsing
-	sb.WriteString("apt-get install -y jq ec2-instance-connect\n\n")
+	// Install jq and AWS CLI v2 for auto-stop functionality
+	sb.WriteString("# Install dependencies\n")
+	sb.WriteString("apt-get install -y jq ec2-instance-connect unzip\n\n")
+
+	// Install AWS CLI v2
+	sb.WriteString("# Install AWS CLI v2\n")
+	sb.WriteString("echo 'Installing AWS CLI v2...'\n")
+	sb.WriteString("ARCH=$(dpkg --print-architecture)\n")
+	sb.WriteString("if [ \"$ARCH\" = \"arm64\" ]; then\n")
+	sb.WriteString("  curl -fsSL \"https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip\" -o \"/tmp/awscliv2.zip\"\n")
+	sb.WriteString("else\n")
+	sb.WriteString("  curl -fsSL \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\" -o \"/tmp/awscliv2.zip\"\n")
+	sb.WriteString("fi\n")
+	sb.WriteString("unzip -q /tmp/awscliv2.zip -d /tmp\n")
+	sb.WriteString("/tmp/aws/install --update || /tmp/aws/install\n")
+	sb.WriteString("rm -rf /tmp/awscliv2.zip /tmp/aws\n")
+	sb.WriteString("aws --version\n\n")
 
 	// Embed the idle monitor script
 	sb.WriteString(generateIdleMonitorScript())

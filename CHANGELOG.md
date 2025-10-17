@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - pkg/aws/iam.go: GetOrCreateSessionManagerRole() now accepts appPrefix parameter
   - Apps create separate roles: aws-jupyter-*, aws-vscode-*, aws-rstudio-*
   - Allows multiple IDE types to coexist without IAM resource conflicts
+- **aws-vscode**: AWS CLI installation upgraded from v1 to v2
+  - User-data script now installs AWS CLI v2 (required for auto-stop functionality)
+  - Added architecture detection (arm64/x86_64) for correct installer selection
+  - Auto-stop system requires AWS CLI v2 for `aws ec2 stop-instances` command
 
 ### Known Issues
 - **aws-vscode**: code-server installation fails in cloud-init (HOME not set)
