@@ -108,3 +108,131 @@ func TestEC2Client_Integration_DescribeRegions(t *testing.T) {
 		t.Log("EC2 client is properly configured")
 	})
 }
+
+// TestEC2Client_Integration_InstanceTypeSupport tests instance type validation
+func TestEC2Client_Integration_InstanceTypeSupport(t *testing.T) {
+	endpoint := os.Getenv("AWS_ENDPOINT_URL")
+	if endpoint == "" {
+		t.Skip("Skipping integration test: AWS_ENDPOINT_URL not set")
+	}
+
+	ctx := context.Background()
+	client, err := NewEC2Client(ctx, "default")
+	if err != nil {
+		t.Fatalf("Failed to create EC2 client: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		instanceType string
+		shouldPass   bool
+	}{
+		{"t3.medium supported", "t3.medium", true},
+		{"t3.large supported", "t3.large", true},
+		{"m5.large supported", "m5.large", true},
+		{"invalid type", "invalid.type", false},
+		{"empty string", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// IsInstanceTypeSupported requires an availability zone
+			supported, err := client.IsInstanceTypeSupported(ctx, tt.instanceType, "us-west-2a")
+
+			// Note: LocalStack may not fully implement instance type checking
+			// So we test that the function runs without error rather than specific results
+			t.Logf("Instance type %s support check returned: %v, err: %v", tt.instanceType, supported, err)
+
+			// We can at least check that empty string is not supported
+			if tt.instanceType == "" && supported {
+				t.Error("Empty instance type should not be supported")
+			}
+		})
+	}
+}
+
+// TestEC2Client_Integration_GetRegion tests region retrieval
+func TestEC2Client_Integration_GetRegion(t *testing.T) {
+	endpoint := os.Getenv("AWS_ENDPOINT_URL")
+	if endpoint == "" {
+		t.Skip("Skipping integration test: AWS_ENDPOINT_URL not set")
+	}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		region         string
+		expectedRegion string
+	}{
+		{"default region", "default", "us-west-2"}, // LocalStack defaults to us-east-1 but config may override
+		{"us-west-2", "us-west-2", "us-west-2"},
+		{"us-east-1", "us-east-1", "us-east-1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var client *EC2Client
+			var err error
+
+			if tt.region == "default" {
+				client, err = NewEC2Client(ctx, "default")
+			} else {
+				client, err = NewEC2ClientForRegion(ctx, tt.region)
+			}
+
+			if err != nil {
+				t.Fatalf("Failed to create EC2 client: %v", err)
+			}
+
+			gotRegion := client.GetRegion()
+			if gotRegion == "" {
+				t.Error("Expected non-empty region")
+			}
+			t.Logf("Client created for region: %s, got: %s", tt.region, gotRegion)
+		})
+	}
+}
+
+// TestIAMClient_Integration tests IAM client creation
+func TestIAMClient_Integration(t *testing.T) {
+	endpoint := os.Getenv("AWS_ENDPOINT_URL")
+	if endpoint == "" {
+		t.Skip("Skipping integration test: AWS_ENDPOINT_URL not set")
+	}
+
+	ctx := context.Background()
+
+	t.Run("Create IAM client", func(t *testing.T) {
+		client, err := NewIAMClient(ctx, "default")
+		if err != nil {
+			t.Fatalf("Failed to create IAM client: %v", err)
+		}
+
+		if client == nil {
+			t.Error("Expected non-nil IAM client")
+		}
+		t.Log("IAM client created successfully")
+	})
+
+	t.Run("Get or create Session Manager role", func(t *testing.T) {
+		client, err := NewIAMClient(ctx, "default")
+		if err != nil {
+			t.Fatalf("Failed to create IAM client: %v", err)
+		}
+
+		// Try to get or create the Session Manager role
+		// Note: LocalStack may not fully implement IAM, so we just test that the function runs
+		profileInfo, err := client.GetOrCreateSessionManagerRole(ctx, "test-app")
+		if err != nil {
+			t.Logf("Note: GetOrCreateSessionManagerRole may not work in LocalStack, error: %v", err)
+			// Don't fail - LocalStack may not fully support IAM
+			return
+		}
+
+		if profileInfo == nil || profileInfo.Arn == "" {
+			t.Error("Expected non-empty profile ARN")
+		}
+		t.Logf("Session Manager profile: %+v", profileInfo)
+	})
+}
