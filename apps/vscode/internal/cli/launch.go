@@ -723,7 +723,7 @@ func waitForVSCodeReady(ctx context.Context, ssmClient *aws.SSMClient, instance 
 	config := readiness.SSMServiceConfig{
 		InstanceID: instanceID,
 		Port:       8080,
-		Timeout:    5 * time.Minute, // 5 minutes should be enough for installation
+		Timeout:    5 * time.Minute,  // 5 minutes should be enough for installation
 		Retry:      10 * time.Second, // Check every 10 seconds
 	}
 

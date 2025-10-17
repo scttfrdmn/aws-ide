@@ -212,8 +212,8 @@ func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*t
 			errMsg := err.Error()
 			// Check if it's an IAM-related error
 			if params.InstanceProfile != "" && (
-				// Common IAM propagation error messages
-				strings.Contains(errMsg, "Invalid IAM Instance Profile") ||
+			// Common IAM propagation error messages
+			strings.Contains(errMsg, "Invalid IAM Instance Profile") ||
 				strings.Contains(errMsg, "iamInstanceProfile") ||
 				strings.Contains(errMsg, "not valid") ||
 				strings.Contains(errMsg, "does not exist")) {

@@ -217,8 +217,8 @@ func TestEC2Client_Smoke_AMIDiscovery(t *testing.T) {
 
 	// Test multiple common AMI bases
 	amiTests := []struct {
-		name    string
-		base    string
+		name     string
+		base     string
 		required bool
 	}{
 		{"Ubuntu 24.04 ARM64", "ubuntu24-arm64", false},

@@ -27,17 +27,17 @@ const (
 // NewLaunchCmd creates the launch command for starting new Jupyter instances
 func NewLaunchCmd() *cobra.Command {
 	var (
-		environment       string
-		instanceType      string
-		customAMI         string
-		idleTimeout       string
-		profile           string
-		region            string
-		availabilityZone  string
-		dryRun            bool
-		connectionMethod  string
-		subnetType        string
-		createNatGateway  bool
+		environment      string
+		instanceType     string
+		customAMI        string
+		idleTimeout      string
+		profile          string
+		region           string
+		availabilityZone string
+		dryRun           bool
+		connectionMethod string
+		subnetType       string
+		createNatGateway bool
 	)
 
 	cmd := &cobra.Command{
@@ -733,7 +733,7 @@ func waitForJupyterReady(ctx context.Context, ssmClient *aws.SSMClient, instance
 	config := readiness.SSMServiceConfig{
 		InstanceID: instanceID,
 		Port:       8888,
-		Timeout:    5 * time.Minute, // 5 minutes should be enough for installation
+		Timeout:    5 * time.Minute,  // 5 minutes should be enough for installation
 		Retry:      10 * time.Second, // Check every 10 seconds
 	}
 

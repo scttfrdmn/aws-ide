@@ -8,10 +8,10 @@ import (
 // TestServiceConfig tests the ServiceConfig struct
 func TestServiceConfig(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         ServiceConfig
-		expectedHost   string
-		expectedPort   int
+		name            string
+		config          ServiceConfig
+		expectedHost    string
+		expectedPort    int
 		expectedTimeout time.Duration
 	}{
 		{
@@ -22,8 +22,8 @@ func TestServiceConfig(t *testing.T) {
 				Timeout: 5 * time.Minute,
 				Retry:   10 * time.Second,
 			},
-			expectedHost:   "192.168.1.100",
-			expectedPort:   8080,
+			expectedHost:    "192.168.1.100",
+			expectedPort:    8080,
 			expectedTimeout: 5 * time.Minute,
 		},
 		{
@@ -34,8 +34,8 @@ func TestServiceConfig(t *testing.T) {
 				Timeout: 3 * time.Minute,
 				Retry:   5 * time.Second,
 			},
-			expectedHost:   "10.0.0.50",
-			expectedPort:   8888,
+			expectedHost:    "10.0.0.50",
+			expectedPort:    8888,
 			expectedTimeout: 3 * time.Minute,
 		},
 		{
@@ -46,8 +46,8 @@ func TestServiceConfig(t *testing.T) {
 				Timeout: 10 * time.Minute,
 				Retry:   15 * time.Second,
 			},
-			expectedHost:   "172.16.0.10",
-			expectedPort:   8787,
+			expectedHost:    "172.16.0.10",
+			expectedPort:    8787,
 			expectedTimeout: 10 * time.Minute,
 		},
 	}
@@ -181,10 +181,10 @@ func TestCheckResult(t *testing.T) {
 // TestCheckResult_ElapsedTime tests elapsed time tracking
 func TestCheckResult_ElapsedTime(t *testing.T) {
 	tests := []struct {
-		name         string
-		elapsedTime  time.Duration
-		wantSeconds  int
-		wantMinutes  int
+		name        string
+		elapsedTime time.Duration
+		wantSeconds int
+		wantMinutes int
 	}{
 		{"30 seconds", 30 * time.Second, 30, 0},
 		{"2 minutes", 2 * time.Minute, 120, 2},
@@ -248,8 +248,8 @@ func TestServiceConfig_PortValidation(t *testing.T) {
 		{"Port 8888", 8888, true},
 		{"Port 8787", 8787, true},
 		{"Port 65535", 65535, true},
-		{"Port 0", 0, false},       // Invalid port
-		{"Port -1", -1, false},     // Invalid port
+		{"Port 0", 0, false},         // Invalid port
+		{"Port -1", -1, false},       // Invalid port
 		{"Port 65536", 65536, false}, // Out of range
 	}
 
@@ -284,7 +284,7 @@ func TestServiceConfig_TimeoutValidation(t *testing.T) {
 		{"1 minute", 1 * time.Minute, true},
 		{"5 minutes", 5 * time.Minute, true},
 		{"10 minutes", 10 * time.Minute, true},
-		{"0 seconds", 0, false}, // Invalid
+		{"0 seconds", 0, false},                // Invalid
 		{"-1 second", -1 * time.Second, false}, // Invalid
 	}
 
@@ -343,27 +343,27 @@ func TestSSMServiceConfig_InstanceIDFormat(t *testing.T) {
 // TestCheckResult_MessageFormatting tests message formatting
 func TestCheckResult_MessageFormatting(t *testing.T) {
 	tests := []struct {
-		name        string
-		ready       bool
-		elapsed     time.Duration
+		name         string
+		ready        bool
+		elapsed      time.Duration
 		wantContains string
 	}{
 		{
-			name:        "success message",
-			ready:       true,
-			elapsed:     2 * time.Minute,
+			name:         "success message",
+			ready:        true,
+			elapsed:      2 * time.Minute,
 			wantContains: "ready",
 		},
 		{
-			name:        "timeout message",
-			ready:       false,
-			elapsed:     5 * time.Minute,
+			name:         "timeout message",
+			ready:        false,
+			elapsed:      5 * time.Minute,
 			wantContains: "timeout",
 		},
 		{
-			name:        "cancelled message",
-			ready:       false,
-			elapsed:     30 * time.Second,
+			name:         "cancelled message",
+			ready:        false,
+			elapsed:      30 * time.Second,
 			wantContains: "cancelled",
 		},
 	}

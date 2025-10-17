@@ -18,18 +18,18 @@ import (
 
 // TestContext holds common resources for E2E tests
 type TestContext struct {
-	T             *testing.T
-	Profile       string
-	Region        string
-	EC2Client     *aws.EC2Client
-	IAMClient     *aws.IAMClient
-	SSMClient     *aws.SSMClient
-	State         *config.LocalState
-	InstanceID    string
-	SubnetID      string
-	KeyPairName   string
-	KeyPairPath   string
-	CleanupFuncs  []func()
+	T            *testing.T
+	Profile      string
+	Region       string
+	EC2Client    *aws.EC2Client
+	IAMClient    *aws.IAMClient
+	SSMClient    *aws.SSMClient
+	State        *config.LocalState
+	InstanceID   string
+	SubnetID     string
+	KeyPairName  string
+	KeyPairPath  string
+	CleanupFuncs []func()
 }
 
 // LaunchConfig holds configuration for launching an instance

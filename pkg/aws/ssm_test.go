@@ -310,10 +310,10 @@ func TestCommandResult_ZeroValues(t *testing.T) {
 // TestSSMClient_HTTPCodeParsing tests the HTTP code parsing logic
 func TestSSMClient_HTTPCodeParsing(t *testing.T) {
 	tests := []struct {
-		name       string
-		output     string
-		wantReady  bool
-		wantCode   string
+		name      string
+		output    string
+		wantReady bool
+		wantCode  string
 	}{
 		{"HTTP 200", "200\n", true, "200"},
 		{"HTTP 302", "302", true, "302"},

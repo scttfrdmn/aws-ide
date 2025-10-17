@@ -25,8 +25,8 @@ type ServiceConfig struct {
 
 // CheckResult contains the result of a readiness check
 type CheckResult struct {
-	Ready      bool
-	Message    string
+	Ready       bool
+	Message     string
 	ElapsedTime time.Duration
 }
 
