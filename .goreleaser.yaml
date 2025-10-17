@@ -48,6 +48,25 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
 
+  - id: aws-vscode
+    main: ./apps/vscode/cmd/aws-vscode
+    binary: aws-vscode
+    dir: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
 archives:
   - id: jupyter
     builds:
@@ -95,6 +114,29 @@ archives:
         formats:
           - zip
 
+  - id: vscode
+    builds:
+      - aws-vscode
+    name_template: >-
+      aws-vscode_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - apps/vscode/README.md
+      - apps/vscode/environments/*.yaml
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
 checksum:
   name_template: 'checksums.txt'
 
@@ -132,10 +174,11 @@ release:
     ## Release {{ .Tag }} ({{ .Date }})
 
     AWS IDE is a monorepo containing multiple cloud-based IDE launchers:
-    - **aws-jupyter**: Launch Jupyter Lab instances on AWS EC2
-    - **aws-rstudio**: Launch RStudio Server instances on AWS EC2
+    - **aws-jupyter**: Launch Jupyter Lab instances on AWS EC2 (Production)
+    - **aws-rstudio**: Launch RStudio Server instances on AWS EC2 (Production)
+    - **aws-vscode**: Launch VSCode Server instances on AWS EC2 (Beta)
 
-    Both tools share infrastructure from the `pkg/` module for consistent behavior.
+    All tools share infrastructure from the `pkg/` module for consistent behavior.
   footer: |
     ## Thanks!
 
@@ -188,6 +231,27 @@ brews:
     test: |
       system "#{bin}/aws-rstudio", "--version"
 
+  - name: aws-vscode
+    ids:
+      - vscode
+    repository:
+      owner: scttfrdmn
+      name: homebrew-tap
+    homepage: https://github.com/scttfrdmn/aws-ide
+    description: CLI tool for launching VSCode Server instances on AWS EC2 Graviton processors (Beta)
+    license: Apache-2.0
+    install: |
+      bin.install "aws-vscode"
+
+      # Install environment templates
+      pkgshare.install Dir["apps/vscode/environments/*.yaml"]
+      (pkgshare/"environments").mkpath
+      Dir["apps/vscode/environments/*.yaml"].each do |env|
+        (pkgshare/"environments").install env
+      end
+    test: |
+      system "#{bin}/aws-vscode", "--version"
+
 # Scoop manifests for Windows
 scoops:
   - name: aws-jupyter
@@ -208,6 +272,16 @@ scoops:
       name: scoop-bucket
     homepage: https://github.com/scttfrdmn/aws-ide
     description: CLI tool for launching RStudio Server instances on AWS EC2 Graviton processors
+    license: Apache-2.0
+
+  - name: aws-vscode
+    ids:
+      - vscode
+    repository:
+      owner: scttfrdmn
+      name: scoop-bucket
+    homepage: https://github.com/scttfrdmn/aws-ide
+    description: CLI tool for launching VSCode Server instances on AWS EC2 Graviton processors (Beta)
     license: Apache-2.0
 
 # Linux packages (deb and rpm)
@@ -245,3 +319,20 @@ nfpms:
     contents:
       - src: apps/rstudio/environments/*.yaml
         dst: /usr/share/aws-rstudio/environments/
+
+  - id: vscode-packages
+    builds:
+      - aws-vscode
+    package_name: aws-vscode
+    vendor: Scott Friedman
+    homepage: https://github.com/scttfrdmn/aws-ide
+    maintainer: Scott Friedman <scttfrdmn@users.noreply.github.com>
+    description: CLI tool for launching VSCode Server instances on AWS EC2 Graviton processors (Beta)
+    license: Apache-2.0
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: apps/vscode/environments/*.yaml
+        dst: /usr/share/aws-vscode/environments/
