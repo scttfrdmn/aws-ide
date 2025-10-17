@@ -71,17 +71,19 @@ Complete the monorepo migration and establish RStudio as a first-class citizen a
   - [x] E2E tests for complete workflows (all 3 IDE types)
   - [x] Testing pyramid properly balanced: unit → integration → E2E
 
-**In Progress:**
-- [ ] Documentation
-  - [ ] Update CHANGELOG for monorepo
-  - [ ] Create migration guide for users
+**Completed:**
+- [x] Documentation
+  - [x] Updated CHANGELOG with all v0.5.0 changes
+  - [x] Migration guide not needed (no users yet, solo dev project)
+  - [x] RStudio README comprehensively updated
+  - [x] ROADMAP reflects current state and value-focused testing
 
 ### Success Criteria
 - ✅ Both apps build and test successfully
 - ✅ CI/CD pipeline working for monorepo
 - ✅ RStudio has feature parity with Jupyter
 - ✅ Shared library appropriately tested (value over coverage metrics)
-- ⏳ Complete documentation for both apps
+- ✅ Complete documentation for both apps
 
 ---
 
