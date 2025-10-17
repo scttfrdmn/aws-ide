@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -190,9 +191,45 @@ func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*t
 		}
 	}
 
-	result, err := e.client.RunInstances(ctx, runInput)
+	// Retry logic for IAM propagation delays
+	// AWS IAM is eventually consistent, so we need to retry if the instance profile isn't ready
+	maxRetries := 5
+	var result *ec2.RunInstancesOutput
+	var err error
+	var lastErr error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Wait before retrying (exponential backoff: 2s, 4s, 8s, 16s)
+			waitTime := time.Duration(1<<uint(attempt)) * time.Second
+			fmt.Printf("Retrying launch in %v (attempt %d/%d)...\n", waitTime, attempt+1, maxRetries)
+			time.Sleep(waitTime)
+		}
+
+		result, err = e.client.RunInstances(ctx, runInput)
+		if err != nil {
+			lastErr = err
+			errMsg := err.Error()
+			// Check if it's an IAM-related error
+			if params.InstanceProfile != "" && (
+				// Common IAM propagation error messages
+				strings.Contains(errMsg, "Invalid IAM Instance Profile") ||
+				strings.Contains(errMsg, "iamInstanceProfile") ||
+				strings.Contains(errMsg, "not valid") ||
+				strings.Contains(errMsg, "does not exist")) {
+				// IAM propagation issue, retry
+				continue
+			}
+			// Different error, don't retry
+			return nil, err
+		}
+
+		// Success!
+		break
+	}
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed after %d attempts: %w", maxRetries, lastErr)
 	}
 
 	if len(result.Instances) == 0 {

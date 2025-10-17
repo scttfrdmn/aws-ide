@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - User-data script now installs AWS CLI v2 (required for auto-stop functionality)
   - Added architecture detection (arm64/x86_64) for correct installer selection
   - Auto-stop system requires AWS CLI v2 for `aws ec2 stop-instances` command
+- **IAM propagation delays causing launch failures**: Added automatic retry logic
+  - pkg/aws/ec2.go: LaunchInstance() now retries up to 5 times with exponential backoff
+  - Detects IAM-related errors and waits for eventual consistency (2s, 4s, 8s, 16s delays)
+  - Prevents "Invalid IAM Instance Profile" errors immediately after profile creation
+  - User no longer needs to manually wait and retry launch commands
 
 ### Known Issues
 - **aws-vscode**: code-server installation fails in cloud-init (HOME not set)
