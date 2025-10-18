@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-01-18
+
+### 🎉 Major Feature Release: Spot Instances, GPU Support, S3 Sync & Config Export
+
+This release adds four major features plus a configuration management system to improve the first-run experience.
+
 ### Added
 
-#### v0.6.0 Features
-
-##### Spot Instance Support
+#### Spot Instance Support
 - Add `--spot` flag to launch commands for cost-optimized instances (up to 90% savings)
 - Add `--spot-max-price` flag to set maximum spot price
 - Add `--spot-type` flag with options: `one-time` (default), `persistent`
@@ -60,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restore commands for reinstalling packages after import
 - Foundation for Phase 2: S3 upload and SSM import
 
-#### Previous Features
+#### Other Improvements from Unreleased
 - **aws-rstudio Feature Parity**: Complete command set matching aws-jupyter
   - All 10 CLI commands implemented (launch, list, status, connect, stop, start, terminate, env, key, generate)
   - 4 R-specific environments: minimal, tidyverse, bioconductor, shiny
@@ -403,7 +407,8 @@ This release marks a significant milestone with comprehensive code quality impro
 - Comprehensive README with installation and usage instructions
 - Project documentation and contributing guidelines
 
-[Unreleased]: https://github.com/scttfrdmn/aws-ide/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/scttfrdmn/aws-ide/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/scttfrdmn/aws-ide/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/scttfrdmn/aws-ide/compare/v0.2.0...v0.5.0
 [0.2.0]: https://github.com/scttfrdmn/aws-ide/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/scttfrdmn/aws-ide/releases/tag/v0.1.0
