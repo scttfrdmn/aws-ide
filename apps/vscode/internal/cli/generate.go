@@ -68,14 +68,14 @@ type ProjectAnalysis struct {
 
 // EnvironmentConfig represents the YAML structure for environments
 type EnvironmentConfig struct {
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"description"`
-	AMIBase     string            `yaml:"ami_base"`
-	InstanceType string           `yaml:"instance_type"`
-	EBSSize     int               `yaml:"ebs_size"`
-	Packages    []string          `yaml:"packages"`
-	Extensions  []string          `yaml:"extensions"`
-	Settings    map[string]string `yaml:"settings,omitempty"`
+	Name         string            `yaml:"name"`
+	Description  string            `yaml:"description"`
+	AMIBase      string            `yaml:"ami_base"`
+	InstanceType string            `yaml:"instance_type"`
+	EBSSize      int               `yaml:"ebs_size"`
+	Packages     []string          `yaml:"packages"`
+	Extensions   []string          `yaml:"extensions"`
+	Settings     map[string]string `yaml:"settings,omitempty"`
 }
 
 func runGenerate(projectDir string, outputFile string) error {
@@ -113,10 +113,10 @@ func runGenerate(projectDir string, outputFile string) error {
 
 func analyzeProject(projectDir string) (*ProjectAnalysis, error) {
 	analysis := &ProjectAnalysis{
-		Scripts:      make(map[string]string),
-		Frameworks:   []string{},
-		Packages:     []string{},
-		DevPackages:  []string{},
+		Scripts:     make(map[string]string),
+		Frameworks:  []string{},
+		Packages:    []string{},
+		DevPackages: []string{},
 	}
 
 	// Check for package.json

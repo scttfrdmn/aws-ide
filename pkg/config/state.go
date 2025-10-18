@@ -15,26 +15,26 @@ const (
 
 // StateChange represents a change in instance state for cost tracking
 type StateChange struct {
-	State     string    `json:"state"`      // "running", "stopped", "terminated"
+	State     string    `json:"state"` // "running", "stopped", "terminated"
 	Timestamp time.Time `json:"timestamp"`
 }
 
 // Instance represents a tracked EC2 instance with its metadata
 type Instance struct {
-	ID            string    `json:"id"`
-	Environment   string    `json:"environment"`
-	InstanceType  string    `json:"instance_type"`
-	PublicIP      string    `json:"public_ip"`
-	KeyPair       string    `json:"key_pair"`
-	LaunchedAt    time.Time `json:"launched_at"`
-	IdleTimeout   string    `json:"idle_timeout"`
-	TunnelPID     int       `json:"tunnel_pid,omitempty"`
-	Region        string    `json:"region"`
-	SecurityGroup string    `json:"security_group"`
-	AMIBase       string    `json:"ami_base,omitempty"`
-	S3Bucket      string    `json:"s3_bucket,omitempty"`     // S3 bucket for data sync
-	S3MountPath   string    `json:"s3_mount_path,omitempty"` // Local path where S3 is mounted
-	EBSSize       int       `json:"ebs_size,omitempty"`      // EBS volume size in GB
+	ID            string        `json:"id"`
+	Environment   string        `json:"environment"`
+	InstanceType  string        `json:"instance_type"`
+	PublicIP      string        `json:"public_ip"`
+	KeyPair       string        `json:"key_pair"`
+	LaunchedAt    time.Time     `json:"launched_at"`
+	IdleTimeout   string        `json:"idle_timeout"`
+	TunnelPID     int           `json:"tunnel_pid,omitempty"`
+	Region        string        `json:"region"`
+	SecurityGroup string        `json:"security_group"`
+	AMIBase       string        `json:"ami_base,omitempty"`
+	S3Bucket      string        `json:"s3_bucket,omitempty"`     // S3 bucket for data sync
+	S3MountPath   string        `json:"s3_mount_path,omitempty"` // Local path where S3 is mounted
+	EBSSize       int           `json:"ebs_size,omitempty"`      // EBS volume size in GB
 	StateChanges  []StateChange `json:"state_changes,omitempty"` // History of state changes for cost tracking
 }
 

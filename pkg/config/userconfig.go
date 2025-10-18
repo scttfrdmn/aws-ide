@@ -11,7 +11,7 @@ import (
 // UserConfig represents user preferences and defaults
 type UserConfig struct {
 	// AWS settings
-	DefaultRegion string `yaml:"default_region,omitempty"`
+	DefaultRegion  string `yaml:"default_region,omitempty"`
 	DefaultProfile string `yaml:"default_profile,omitempty"`
 
 	// Instance defaults
@@ -20,30 +20,30 @@ type UserConfig struct {
 	DefaultAMIBase      string `yaml:"default_ami_base,omitempty"`
 
 	// Networking defaults
-	DefaultSubnetType   string `yaml:"default_subnet_type,omitempty"` // "public" or "private"
-	PreferIPv6          bool   `yaml:"prefer_ipv6,omitempty"`
+	DefaultSubnetType string `yaml:"default_subnet_type,omitempty"` // "public" or "private"
+	PreferIPv6        bool   `yaml:"prefer_ipv6,omitempty"`
 
 	// Behavior settings
-	IdleTimeout         string `yaml:"idle_timeout,omitempty"`
-	AutoTerminate       bool   `yaml:"auto_terminate,omitempty"`
-	ConfirmDestructive  bool   `yaml:"confirm_destructive,omitempty"` // Confirm before terminate/delete
+	IdleTimeout        string `yaml:"idle_timeout,omitempty"`
+	AutoTerminate      bool   `yaml:"auto_terminate,omitempty"`
+	ConfirmDestructive bool   `yaml:"confirm_destructive,omitempty"` // Confirm before terminate/delete
 
 	// Cost tracking
-	EnableCostTracking  bool   `yaml:"enable_cost_tracking,omitempty"`
-	CostAlertThreshold  float64 `yaml:"cost_alert_threshold,omitempty"` // Alert when monthly cost exceeds this
+	EnableCostTracking bool    `yaml:"enable_cost_tracking,omitempty"`
+	CostAlertThreshold float64 `yaml:"cost_alert_threshold,omitempty"` // Alert when monthly cost exceeds this
 
 	// App-specific settings
-	Jupyter  *AppConfig `yaml:"jupyter,omitempty"`
-	RStudio  *AppConfig `yaml:"rstudio,omitempty"`
-	VSCode   *AppConfig `yaml:"vscode,omitempty"`
+	Jupyter *AppConfig `yaml:"jupyter,omitempty"`
+	RStudio *AppConfig `yaml:"rstudio,omitempty"`
+	VSCode  *AppConfig `yaml:"vscode,omitempty"`
 }
 
 // AppConfig contains app-specific configuration
 type AppConfig struct {
-	DefaultEnvironment string `yaml:"default_environment,omitempty"`
+	DefaultEnvironment  string `yaml:"default_environment,omitempty"`
 	DefaultInstanceType string `yaml:"default_instance_type,omitempty"`
-	DefaultEBSSize     int    `yaml:"default_ebs_size,omitempty"`
-	Port               int    `yaml:"port,omitempty"`
+	DefaultEBSSize      int    `yaml:"default_ebs_size,omitempty"`
+	Port                int    `yaml:"port,omitempty"`
 }
 
 // GetUserConfigPath returns the path to the user config file
@@ -117,32 +117,32 @@ func InitUserConfig() error {
 // getDefaultConfig returns a config with sensible defaults
 func getDefaultConfig() *UserConfig {
 	return &UserConfig{
-		DefaultRegion:      "",  // Use AWS SDK default
-		DefaultProfile:     "",  // Use AWS SDK default
+		DefaultRegion:       "", // Use AWS SDK default
+		DefaultProfile:      "", // Use AWS SDK default
 		DefaultInstanceType: "t4g.medium",
-		DefaultEBSSize:     20,
-		DefaultAMIBase:     "ubuntu-22.04-arm64",
-		DefaultSubnetType:  "public",
-		PreferIPv6:         false,
-		IdleTimeout:        "4h",
-		AutoTerminate:      false,
-		ConfirmDestructive: true,
-		EnableCostTracking: true,
-		CostAlertThreshold: 100.0, // $100/month
+		DefaultEBSSize:      20,
+		DefaultAMIBase:      "ubuntu-22.04-arm64",
+		DefaultSubnetType:   "public",
+		PreferIPv6:          false,
+		IdleTimeout:         "4h",
+		AutoTerminate:       false,
+		ConfirmDestructive:  true,
+		EnableCostTracking:  true,
+		CostAlertThreshold:  100.0, // $100/month
 		Jupyter: &AppConfig{
-			DefaultEnvironment: "data-science",
-			DefaultInstanceType: "",  // Use global default
-			Port:              8888,
+			DefaultEnvironment:  "data-science",
+			DefaultInstanceType: "", // Use global default
+			Port:                8888,
 		},
 		RStudio: &AppConfig{
-			DefaultEnvironment: "r-statistics",
-			DefaultInstanceType: "",  // Use global default
-			Port:              8787,
+			DefaultEnvironment:  "r-statistics",
+			DefaultInstanceType: "", // Use global default
+			Port:                8787,
 		},
 		VSCode: &AppConfig{
-			DefaultEnvironment: "web",
-			DefaultInstanceType: "",  // Use global default
-			Port:              8080,
+			DefaultEnvironment:  "web",
+			DefaultInstanceType: "", // Use global default
+			Port:                8080,
 		},
 	}
 }

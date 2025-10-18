@@ -10,9 +10,9 @@ import (
 
 func TestDetermineProjectType(t *testing.T) {
 	tests := []struct {
-		name          string
-		frameworks    []string
-		expectedType  string
+		name         string
+		frameworks   []string
+		expectedType string
 	}{
 		{"React only", []string{"React"}, "frontend"},
 		{"Vue only", []string{"Vue.js"}, "frontend"},

@@ -73,24 +73,24 @@ const EBSPricePerGBMonth = 0.08
 
 // StateChange represents a change in instance state
 type StateChange struct {
-	State     string    // "running", "stopped", "terminated"
+	State     string // "running", "stopped", "terminated"
 	Timestamp time.Time
 }
 
 // CostCalculation contains cost breakdown for an instance
 type CostCalculation struct {
-	InstanceType    string
-	LaunchedAt      time.Time
-	StateChanges    []StateChange
-	CurrentState    string
-	EBSSize         int // GB
+	InstanceType string
+	LaunchedAt   time.Time
+	StateChanges []StateChange
+	CurrentState string
+	EBSSize      int // GB
 
 	// Computed costs
-	TotalRunningHours float64 // Actual hours in "running" state
-	TotalElapsedHours float64 // Total hours since launch
-	ComputeCost       float64 // Cost for running hours
-	StorageCost       float64 // EBS storage cost
-	TotalCost         float64 // Total = Compute + Storage
+	TotalRunningHours    float64 // Actual hours in "running" state
+	TotalElapsedHours    float64 // Total hours since launch
+	ComputeCost          float64 // Cost for running hours
+	StorageCost          float64 // EBS storage cost
+	TotalCost            float64 // Total = Compute + Storage
 	EffectiveCostPerHour float64 // Total / Elapsed hours
 
 	// Comparison
@@ -231,12 +231,12 @@ func isLargeInstance(instanceType string) bool {
 func containsSize(instanceType, size string) bool {
 	return len(instanceType) >= len(size) &&
 		(instanceType[len(instanceType)-len(size):] == size ||
-		 instanceType == "t4g."+size ||
-		 instanceType == "t3."+size ||
-		 instanceType == "m7g."+size ||
-		 instanceType == "m6i."+size ||
-		 instanceType == "c7g."+size ||
-		 instanceType == "r7g."+size)
+			instanceType == "t4g."+size ||
+			instanceType == "t3."+size ||
+			instanceType == "m7g."+size ||
+			instanceType == "m6i."+size ||
+			instanceType == "c7g."+size ||
+			instanceType == "r7g."+size)
 }
 
 // FormatCost formats a cost value as currency
