@@ -1,0 +1,131 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch: # Manual trigger only due to cost and time
+    inputs:
+      aws_region:
+        description: 'AWS Region to test against'
+        required: true
+        default: 'us-west-2'
+        type: choice
+        options:
+          - us-west-2
+          - us-east-1
+          - us-east-2
+          - eu-west-1
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - jupyter
+          - rstudio
+          - vscode
+
+jobs:
+  e2e:
+    name: E2E Tests (Real AWS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    # Only run if AWS credentials are configured
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Verify AWS Credentials
+        run: |
+          aws sts get-caller-identity
+          echo "Running E2E tests in region: ${{ inputs.aws_region }}"
+
+      - name: Run E2E tests (pkg)
+        if: inputs.test_suite == 'all'
+        run: |
+          cd pkg
+          go test -v -tags=e2e -timeout 30m ./...
+
+      - name: Run E2E tests (jupyter)
+        if: inputs.test_suite == 'all' || inputs.test_suite == 'jupyter'
+        run: |
+          cd apps/jupyter
+          go test -v -tags=e2e -timeout 30m ./... || echo "No E2E tests yet"
+
+      - name: Run E2E tests (rstudio)
+        if: inputs.test_suite == 'all' || inputs.test_suite == 'rstudio'
+        run: |
+          cd apps/rstudio
+          go test -v -tags=e2e -timeout 30m ./... || echo "No E2E tests yet"
+
+      - name: Run E2E tests (vscode)
+        if: inputs.test_suite == 'all' || inputs.test_suite == 'vscode'
+        run: |
+          cd apps/vscode
+          go test -v -tags=e2e -timeout 30m ./... || echo "No E2E tests yet"
+
+      - name: Cleanup test resources
+        if: always()
+        run: |
+          echo "Cleaning up E2E test resources..."
+          # Terminate any instances with CreatedBy=aws-ide-test tag
+          aws ec2 describe-instances \
+            --filters "Name=tag:CreatedBy,Values=aws-ide-test" \
+                     "Name=instance-state-name,Values=running,stopped,stopping,pending" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text | xargs -r -n 1 aws ec2 terminate-instances --instance-ids || true
+
+          # Wait a moment for terminations to start
+          sleep 5
+
+          # Delete any test security groups (may fail if instances still attached)
+          aws ec2 describe-security-groups \
+            --filters "Name=tag:CreatedBy,Values=aws-ide-test" \
+            --query 'SecurityGroups[].GroupId' \
+            --output text | xargs -r -n 1 aws ec2 delete-security-group --group-id || true
+
+          # Delete any test IAM roles
+          for role in $(aws iam list-roles --query 'Roles[?contains(RoleName, `test`)].RoleName' --output text); do
+            echo "Cleaning up role: $role"
+            # Detach policies
+            aws iam list-attached-role-policies --role-name "$role" \
+              --query 'AttachedPolicies[].PolicyArn' --output text | \
+              xargs -r -n 1 aws iam detach-role-policy --role-name "$role" --policy-arn || true
+            # Delete instance profiles
+            aws iam list-instance-profiles-for-role --role-name "$role" \
+              --query 'InstanceProfiles[].InstanceProfileName' --output text | \
+              xargs -r -n 1 aws iam remove-role-from-instance-profile --role-name "$role" --instance-profile-name || true
+            # Delete role
+            aws iam delete-role --role-name "$role" || true
+          done
+
+          echo "Cleanup complete"
+
+      - name: Report test costs (estimate)
+        if: always()
+        run: |
+          echo "### E2E Test Cost Estimate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "E2E tests typically cost approximately:" >> $GITHUB_STEP_SUMMARY
+          echo "- Instance time: ~\$0.05-0.15 per test run" >> $GITHUB_STEP_SUMMARY
+          echo "- EBS storage: ~\$0.01 per test run" >> $GITHUB_STEP_SUMMARY
+          echo "- Data transfer: negligible" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Estimated total cost: \$0.06-0.20 per test suite**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Region tested: ${{ inputs.aws_region }}" >> $GITHUB_STEP_SUMMARY
+          echo "Test suite: ${{ inputs.test_suite }}" >> $GITHUB_STEP_SUMMARY

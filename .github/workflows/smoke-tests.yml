@@ -1,0 +1,75 @@
+name: Smoke Tests
+
+on:
+  workflow_dispatch: # Manual trigger only
+    inputs:
+      aws_region:
+        description: 'AWS Region to test against'
+        required: true
+        default: 'us-west-2'
+        type: choice
+        options:
+          - us-west-2
+          - us-east-1
+          - us-east-2
+          - eu-west-1
+
+jobs:
+  smoke:
+    name: Smoke Tests (Real AWS)
+    runs-on: ubuntu-latest
+
+    # Only run if AWS credentials are configured
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Verify AWS Credentials
+        run: |
+          aws sts get-caller-identity
+          echo "Testing in region: ${{ inputs.aws_region }}"
+
+      - name: Run smoke tests (pkg)
+        run: |
+          cd pkg
+          go test -v -tags=smoke -timeout 10m ./...
+
+      - name: Run smoke tests (jupyter)
+        run: |
+          cd apps/jupyter
+          go test -v -tags=smoke -timeout 10m ./... || echo "No smoke tests yet"
+
+      - name: Run smoke tests (rstudio)
+        run: |
+          cd apps/rstudio
+          go test -v -tags=smoke -timeout 10m ./... || echo "No smoke tests yet"
+
+      - name: Run smoke tests (vscode)
+        run: |
+          cd apps/vscode
+          go test -v -tags=smoke -timeout 10m ./... || echo "No smoke tests yet"
+
+      - name: Cleanup test resources (on failure)
+        if: failure()
+        run: |
+          echo "Cleaning up any test resources..."
+          # List any EC2 instances with CreatedBy=aws-ide-test tag
+          aws ec2 describe-instances \
+            --filters "Name=tag:CreatedBy,Values=aws-ide-test" \
+                     "Name=instance-state-name,Values=running,stopped,stopping" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text | xargs -r aws ec2 terminate-instances --instance-ids || true

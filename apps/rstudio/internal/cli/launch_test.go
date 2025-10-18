@@ -64,7 +64,7 @@ func TestRunLaunch_InvalidEnvironment(t *testing.T) {
 	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	// Run launch with non-existent environment
-	err := runLaunch("non-existent-env", "", "", "4h", "default", "", "", false, "ssh", "public", false, "", "")
+	err := runLaunch("non-existent-env", "", "", "4h", "default", "", "", false, "ssh", "public", false, false, "", "", "", "")
 
 	// Check result
 	if err == nil {
@@ -100,7 +100,7 @@ func TestRunLaunch_ValidEnvironment(t *testing.T) {
 	}()
 
 	// Run launch with valid environment but invalid AWS creds (should fail on AWS client creation)
-	err := runLaunch("data-science", "m7g.large", "", "8h", "default", "us-west-2", "", false, "ssh", "public", false, "", "")
+	err := runLaunch("data-science", "m7g.large", "", "8h", "default", "us-west-2", "", false, "ssh", "public", false, false, "", "", "", "")
 
 	// Check result - should fail when trying to create AWS client with fake creds
 	if err == nil {
@@ -137,7 +137,7 @@ func TestRunLaunch_InstanceTypeOverride(t *testing.T) {
 
 	// The function should load the environment and override instance type
 	// We expect it to fail at AWS client creation, but we can check the logic
-	err := runLaunch("minimal", "c7g.xlarge", "", "2h", "default", "", "", false, "ssh", "public", false, "", "")
+	err := runLaunch("minimal", "c7g.xlarge", "", "2h", "default", "", "", false, "ssh", "public", false, false, "", "", "", "")
 
 	// Should fail at AWS client creation
 	if err == nil {

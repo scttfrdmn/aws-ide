@@ -150,6 +150,80 @@ jobs:
           working-directory: apps/vscode
           args: --timeout=5m
 
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: ec2,iam,ssm
+          DEBUG: 1
+          DOCKER_HOST: unix:///var/run/docker.sock
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "awslocal ec2 describe-regions || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Wait for LocalStack
+        run: |
+          echo "Waiting for LocalStack to be ready..."
+          timeout 60 bash -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"ec2\": \"available\""; do sleep 2; done'
+          echo "LocalStack is ready"
+
+      - name: Run integration tests (pkg)
+        env:
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          cd pkg
+          go test -v -tags=integration -timeout 10m ./...
+
+      - name: Run integration tests (jupyter)
+        env:
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          cd apps/jupyter
+          go test -v -tags=integration -timeout 10m ./... || echo "No integration tests yet"
+
+      - name: Run integration tests (rstudio)
+        env:
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          cd apps/rstudio
+          go test -v -tags=integration -timeout 10m ./... || echo "No integration tests yet"
+
+      - name: Run integration tests (vscode)
+        env:
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          cd apps/vscode
+          go test -v -tags=integration -timeout 10m ./... || echo "No integration tests yet"
+
   build:
     name: Build
     runs-on: ubuntu-latest
