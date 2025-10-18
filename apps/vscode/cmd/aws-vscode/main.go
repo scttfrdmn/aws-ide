@@ -49,6 +49,12 @@ Features:
 	rootCmd.AddCommand(cli.NewStatusCmd())
 	rootCmd.AddCommand(cli.NewEnvCmd())
 	rootCmd.AddCommand(cli.NewKeyCmd())
+	rootCmd.AddCommand(cli.NewCreateAMICmd())
+	rootCmd.AddCommand(cli.NewDeleteAMICmd())
+	rootCmd.AddCommand(cli.NewListAMIsCmd())
+	rootCmd.AddCommand(cli.NewGenerateCmd())
+	rootCmd.AddCommand(cli.NewConfigCmd())
+	rootCmd.AddCommand(cli.NewCostsCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

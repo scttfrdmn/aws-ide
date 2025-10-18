@@ -13,6 +13,12 @@ const (
 	permStateFile = 0600 // Owner read/write only (rw-------)
 )
 
+// StateChange represents a change in instance state for cost tracking
+type StateChange struct {
+	State     string    `json:"state"`      // "running", "stopped", "terminated"
+	Timestamp time.Time `json:"timestamp"`
+}
+
 // Instance represents a tracked EC2 instance with its metadata
 type Instance struct {
 	ID            string    `json:"id"`
@@ -28,6 +34,8 @@ type Instance struct {
 	AMIBase       string    `json:"ami_base,omitempty"`
 	S3Bucket      string    `json:"s3_bucket,omitempty"`     // S3 bucket for data sync
 	S3MountPath   string    `json:"s3_mount_path,omitempty"` // Local path where S3 is mounted
+	EBSSize       int       `json:"ebs_size,omitempty"`      // EBS volume size in GB
+	StateChanges  []StateChange `json:"state_changes,omitempty"` // History of state changes for cost tracking
 }
 
 // LocalState manages the local state file tracking active instances
@@ -87,4 +95,20 @@ func (s *LocalState) Save() error {
 		return err
 	}
 	return os.WriteFile(statePath, data, permStateFile)
+}
+
+// RecordStateChange records a state change for an instance
+func (i *Instance) RecordStateChange(state string) {
+	// Don't record duplicate state changes
+	if len(i.StateChanges) > 0 {
+		lastState := i.StateChanges[len(i.StateChanges)-1].State
+		if lastState == state {
+			return
+		}
+	}
+
+	i.StateChanges = append(i.StateChanges, StateChange{
+		State:     state,
+		Timestamp: time.Now(),
+	})
 }
