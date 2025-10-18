@@ -39,6 +39,44 @@ AWS IDE is a monorepo containing multiple CLI tools for managing different cloud
 
 ## Quick Start
 
+### Install via Package Managers
+
+**Homebrew (macOS/Linux)**
+```bash
+brew tap scttfrdmn/tap
+brew install aws-jupyter aws-rstudio aws-vscode
+```
+
+**Scoop (Windows)**
+```bash
+scoop bucket add scttfrdmn https://github.com/scttfrdmn/scoop-bucket
+scoop install aws-jupyter aws-rstudio aws-vscode
+```
+
+**APT (Debian/Ubuntu)**
+```bash
+# Download and install deb packages
+wget https://github.com/scttfrdmn/aws-ide/releases/latest/download/aws-jupyter_0.5.1_linux_amd64.deb
+wget https://github.com/scttfrdmn/aws-ide/releases/latest/download/aws-rstudio_0.5.1_linux_amd64.deb
+wget https://github.com/scttfrdmn/aws-ide/releases/latest/download/aws-vscode_0.5.1_linux_amd64.deb
+
+sudo dpkg -i aws-jupyter_0.5.1_linux_amd64.deb
+sudo dpkg -i aws-rstudio_0.5.1_linux_amd64.deb
+sudo dpkg -i aws-vscode_0.5.1_linux_amd64.deb
+```
+
+**YUM/DNF (RedHat/Fedora/Amazon Linux)**
+```bash
+# Download and install rpm packages
+wget https://github.com/scttfrdmn/aws-ide/releases/latest/download/aws-jupyter_0.5.1_linux_amd64.rpm
+wget https://github.com/scttfrdmn/aws-ide/releases/latest/download/aws-rstudio_0.5.1_linux_amd64.rpm
+wget https://github.com/scttfrdmn/aws-ide/releases/latest/download/aws-vscode_0.5.1_linux_amd64.rpm
+
+sudo rpm -i aws-jupyter_0.5.1_linux_amd64.rpm
+sudo rpm -i aws-rstudio_0.5.1_linux_amd64.rpm
+sudo rpm -i aws-vscode_0.5.1_linux_amd64.rpm
+```
+
 ### Install from Source
 
 ```bash
@@ -185,13 +223,14 @@ See the [Jupyter AWS Authentication Guide](apps/jupyter/docs/AWS_AUTHENTICATION.
 
 ## Versioning
 
-AWS IDE uses **independent versioning** for each app. Each tool has its own version number and release schedule.
+AWS IDE uses **unified versioning** across all apps in the monorepo. All three tools share the same version number and are released together.
 
-- **aws-jupyter**: v0.5.0 (stable)
-- **aws-vscode**: v0.1.0 (alpha)
-- **aws-rstudio**: v0.5.0 (beta)
+- **Current Release**: v0.5.1
+- **aws-jupyter**: v0.5.1 (production)
+- **aws-rstudio**: v0.5.1 (production)
+- **aws-vscode**: v0.5.1 (beta)
 
-Releases use app-prefixed Git tags: `jupyter/v0.5.0`, `vscode/v0.1.0`, etc.
+Releases use semantic versioning with Git tags: `v0.5.1`, `v0.6.0`, etc.
 
 See [VERSIONING.md](VERSIONING.md) for detailed versioning strategy and release process.
 
