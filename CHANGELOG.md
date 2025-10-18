@@ -8,6 +8,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+#### v0.6.0 Features
+
+##### Spot Instance Support
+- Add `--spot` flag to launch commands for cost-optimized instances (up to 90% savings)
+- Add `--spot-max-price` flag to set maximum spot price
+- Add `--spot-type` flag with options: `one-time` (default), `persistent`
+- Automatic pricing defaults based on instance type
+- Spot instance status displayed in `list` command output
+- State tracking for spot instances
+
+##### Enhanced List Command
+- Multiple output formats: `table` (default), `json`, `simple`
+- Rich table output with colors and status indicators (✓, ●, ○)
+- Comprehensive instance details: ID, type, state, uptime, connection method
+- Filter by state: `--state running`, `--state stopped`, `--state terminated`
+- Display spot instance status and S3 sync configuration
+- Human-readable uptime formatting
+
+##### S3 Data Sync
+- Add `--s3-bucket` flag for persistent workspace storage across instance lifecycle
+- Add `--s3-sync-path` flag to customize sync directory (default: `/home/ubuntu/data`)
+- Automatic AWS Mountpoint for S3 installation and configuration
+- Architecture-aware installation (ARM64 and x86_64 support)
+- Systemd mount units for automatic mounting on instance start
+- Bidirectional sync for workspace persistence
+- S3 bucket access testing and validation during setup
+- Comprehensive logging to `/var/log/s3-sync-setup.log`
+- Workspace files, settings, and SSH keys persist across stop/start cycles
+
+##### GPU Instance Support
+- Automatic GPU detection via `lspci` hardware check
+- NVIDIA driver 535 installation (Ubuntu 24.04 compatible)
+- CUDA Toolkit 12.2 installation for GPU computing
+- Environment variable configuration (CUDA_HOME, PATH, LD_LIBRARY_PATH)
+- Graceful handling when no GPU detected (skips installation silently)
+- Comprehensive logging to `/var/log/gpu-setup.log`
+- Works with all GPU instance types: g4dn, g5, p3, p4, etc.
+- Zero configuration required - automatic setup on GPU instances
+
+##### Config Export/Import System (Phase 1)
+- Declarative YAML-based export configuration system
+- Default export configs for all three IDEs:
+  - `configs/rstudio-default.yaml` - RStudio settings, R packages, preferences
+  - `configs/vscode-default.yaml` - VSCode settings, extensions, preferences
+  - `configs/jupyter-default.yaml` - Jupyter settings, kernels, Python packages
+- `export-config` command for RStudio (exports to tar.gz archive)
+- Supports exporting IDE settings, package lists, dotfiles, SSH keys
+- Generate commands for creating package lists on export
+- Restore commands for reinstalling packages after import
+- Foundation for Phase 2: S3 upload and SSM import
+
+#### Previous Features
 - **aws-rstudio Feature Parity**: Complete command set matching aws-jupyter
   - All 10 CLI commands implemented (launch, list, status, connect, stop, start, terminate, env, key, generate)
   - 4 R-specific environments: minimal, tidyverse, bioconductor, shiny
