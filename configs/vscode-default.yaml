@@ -1,0 +1,51 @@
+name: "VSCode Default Configuration"
+description: "Complete VSCode configuration export including settings, extensions, and user preferences"
+app: "vscode"
+
+# Paths to export from the instance
+export_paths:
+  # VSCode/code-server settings
+  - path: ".config/code-server"
+    description: "VSCode settings, preferences, and configuration"
+
+  - path: ".local/share/code-server"
+    description: "VSCode extensions, snippets, and user data"
+
+  # VSCode extension list
+  - path: ".vscode-extensions.txt"
+    description: "List of installed VSCode extensions"
+    generate_command: "code-server --list-extensions > ~/.vscode-extensions.txt 2>/dev/null || true"
+
+  # User shell configuration
+  - path: ".bashrc"
+    description: "Bash shell configuration and aliases"
+    optional: true
+
+  - path: ".bash_aliases"
+    description: "Bash aliases"
+    optional: true
+
+  # Git configuration
+  - path: ".gitconfig"
+    description: "Git user configuration (name, email, aliases)"
+    optional: true
+
+  # SSH keys (for git authentication)
+  - path: ".ssh"
+    description: "SSH keys for git authentication"
+    optional: true
+    exclude:
+      - ".ssh/known_hosts"
+      - ".ssh/authorized_keys"
+
+# Commands to run after importing configuration to restore state
+restore_commands:
+  # Reinstall VSCode extensions
+  - description: "Installing VSCode extensions from saved list"
+    command: "if [ -f ~/.vscode-extensions.txt ]; then cat ~/.vscode-extensions.txt | xargs -I {} code-server --install-extension {} || true; fi"
+    timeout: 600  # 10 minutes for extension installation
+
+  # Set correct permissions for SSH keys
+  - description: "Setting SSH key permissions"
+    command: "if [ -d ~/.ssh ]; then chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* 2>/dev/null || true; fi"
+    timeout: 10

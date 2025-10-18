@@ -38,13 +38,15 @@ func NewLaunchCmd() *cobra.Command {
 		connectionMethod string
 		subnetType       string
 		createNatGateway bool
+		s3Bucket         string
+		s3SyncPath       string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "launch",
 		Short: "Launch a new Jupyter instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runLaunch(environment, instanceType, customAMI, idleTimeout, profile, region, availabilityZone, dryRun, connectionMethod, subnetType, createNatGateway)
+			return runLaunch(environment, instanceType, customAMI, idleTimeout, profile, region, availabilityZone, dryRun, connectionMethod, subnetType, createNatGateway, s3Bucket, s3SyncPath)
 		},
 	}
 
@@ -59,6 +61,8 @@ func NewLaunchCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&connectionMethod, "connection", "c", "ssh", "Connection method: ssh or session-manager")
 	cmd.Flags().StringVarP(&subnetType, "subnet-type", "s", "public", "Subnet type: public or private")
 	cmd.Flags().BoolVar(&createNatGateway, "create-nat-gateway", false, "Create NAT Gateway for private subnet internet access")
+	cmd.Flags().StringVar(&s3Bucket, "s3-bucket", "", "S3 bucket for data sync (e.g., my-bucket or my-bucket/prefix)")
+	cmd.Flags().StringVar(&s3SyncPath, "s3-sync-path", "/home/ubuntu/data", "Local path to sync with S3")
 
 	return cmd
 }
@@ -91,7 +95,7 @@ func parseDuration(s string) (int, error) {
 	}
 }
 
-func runLaunch(environment, instanceType, customAMI, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool) error {
+func runLaunch(environment, instanceType, customAMI, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool, s3Bucket, s3SyncPath string) error {
 	ctx := context.Background()
 
 	// Load and validate environment configuration
@@ -112,13 +116,13 @@ func runLaunch(environment, instanceType, customAMI, idleTimeout, profile, regio
 	}
 
 	// Display warnings and information
-	displayLaunchWarnings(connectionMethod, subnetType, createNatGateway)
+	displayLaunchWarnings(connectionMethod, subnetType, createNatGateway, s3Bucket)
 
 	if dryRun {
-		return executeDryRun(ctx, env, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType, createNatGateway)
+		return executeDryRun(ctx, env, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType, createNatGateway, s3Bucket)
 	}
 
-	return executeLaunch(ctx, env, customAMI, profile, region, availabilityZone, idleTimeoutSeconds, connectionMethod, subnetType, createNatGateway)
+	return executeLaunch(ctx, env, customAMI, profile, region, availabilityZone, idleTimeoutSeconds, connectionMethod, subnetType, createNatGateway, s3Bucket, s3SyncPath)
 }
 
 // loadAndValidateEnvironment loads the environment configuration and applies overrides
@@ -148,7 +152,7 @@ func validateLaunchOptions(connectionMethod, subnetType string) error {
 }
 
 // displayLaunchWarnings shows relevant warnings about the selected configuration
-func displayLaunchWarnings(connectionMethod, subnetType string, createNatGateway bool) {
+func displayLaunchWarnings(connectionMethod, subnetType string, createNatGateway bool, s3Bucket string) {
 	// Warn about private subnet implications
 	if subnetType == subnetTypePrivate && !createNatGateway {
 		fmt.Println("⚠️  Warning: Private subnet without NAT Gateway means limited internet access")
@@ -164,10 +168,18 @@ func displayLaunchWarnings(connectionMethod, subnetType string, createNatGateway
 			fmt.Println("   - Instance will be in public subnet but without SSH access")
 		}
 	}
+
+	// S3 data sync information
+	if s3Bucket != "" {
+		fmt.Println("📦 S3 Data Sync enabled")
+		fmt.Printf("   - Bucket: %s\n", s3Bucket)
+		fmt.Println("   - Data will be automatically synced with S3")
+		fmt.Println("   - Requires S3 access permissions in IAM role")
+	}
 }
 
 // executeDryRun performs a dry run and displays what would be done
-func executeDryRun(ctx context.Context, env *config.Environment, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType string, createNatGateway bool) error {
+func executeDryRun(ctx context.Context, env *config.Environment, profile, region, availabilityZone, idleTimeout, connectionMethod, subnetType string, createNatGateway bool, s3Bucket string) error {
 	ec2Client, err := aws.NewEC2Client(ctx, profile)
 	if err != nil {
 		return fmt.Errorf("failed to create AWS client for dry run: %w", err)
@@ -176,7 +188,7 @@ func executeDryRun(ctx context.Context, env *config.Environment, profile, region
 	actualRegion := determineRegion(ec2Client, region)
 	keyName := aws.DefaultKeyPairStrategy(actualRegion).GetDefaultKeyName()
 
-	printDryRunConfiguration(env, actualRegion, profile, region, idleTimeout, connectionMethod, subnetType, createNatGateway, keyName)
+	printDryRunConfiguration(env, actualRegion, profile, region, idleTimeout, connectionMethod, subnetType, createNatGateway, s3Bucket, keyName)
 	printDryRunActions(env, connectionMethod, subnetType, createNatGateway, keyName)
 
 	fmt.Println("[DRY RUN] No resources were created")
@@ -184,7 +196,7 @@ func executeDryRun(ctx context.Context, env *config.Environment, profile, region
 }
 
 // executeLaunch performs the actual instance launch
-func executeLaunch(ctx context.Context, env *config.Environment, customAMI, profile, region, availabilityZone string, idleTimeoutSeconds int, connectionMethod, subnetType string, createNatGateway bool) error {
+func executeLaunch(ctx context.Context, env *config.Environment, customAMI, profile, region, availabilityZone string, idleTimeoutSeconds int, connectionMethod, subnetType string, createNatGateway bool, s3Bucket, s3SyncPath string) error {
 	fmt.Printf("Launching %s environment on %s...\n", env.Name, env.InstanceType)
 
 	// Setup AWS clients and determine region
@@ -221,7 +233,7 @@ func executeLaunch(ctx context.Context, env *config.Environment, customAMI, prof
 	}
 
 	// Select AMI and generate user data
-	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion, customAMI, idleTimeoutSeconds)
+	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion, customAMI, idleTimeoutSeconds, s3Bucket, s3SyncPath)
 	if err != nil {
 		return err
 	}
@@ -396,7 +408,7 @@ func setupSecurityGroup(ctx context.Context, ec2Client *aws.EC2Client, vpcID, co
 }
 
 // prepareInstanceImage selects AMI and generates user data
-func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, region, customAMI string, idleTimeoutSeconds int) (string, string, error) {
+func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *config.Environment, region, customAMI string, idleTimeoutSeconds int, s3Bucket, s3SyncPath string) (string, string, error) {
 	var amiID string
 
 	// Use custom AMI if provided, otherwise select base AMI
@@ -427,7 +439,7 @@ func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *co
 	}
 
 	fmt.Println("📜 Generating user data script...")
-	userData, err := jupyterconfig.GenerateUserData(env, idleTimeoutSeconds)
+	userData, err := jupyterconfig.GenerateUserData(env, idleTimeoutSeconds, s3Bucket, s3SyncPath)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate user data: %w", err)
 	}
@@ -590,7 +602,7 @@ func saveInstanceToState(instance *types.Instance, env *config.Environment, keyI
 }
 
 // printDryRunConfiguration displays the dry run configuration
-func printDryRunConfiguration(env *config.Environment, actualRegion, profile, region, idleTimeout, connectionMethod, subnetType string, createNatGateway bool, keyName string) {
+func printDryRunConfiguration(env *config.Environment, actualRegion, profile, region, idleTimeout, connectionMethod, subnetType string, createNatGateway bool, s3Bucket, keyName string) {
 	fmt.Printf("[DRY RUN] Would launch %s environment on %s in region %s\n", env.Name, env.InstanceType, actualRegion)
 	fmt.Printf("[DRY RUN] Configuration:\n")
 	fmt.Printf("  - Environment: %s\n", env.Name)
@@ -615,6 +627,9 @@ func printDryRunConfiguration(env *config.Environment, actualRegion, profile, re
 		fmt.Printf("  - SSH Key Pair: %s (economical reuse)\n", keyName)
 	} else {
 		fmt.Printf("  - Session Manager: IAM role will be created/attached\n")
+	}
+	if s3Bucket != "" {
+		fmt.Printf("  - S3 Data Sync: %s\n", s3Bucket)
 	}
 }
 

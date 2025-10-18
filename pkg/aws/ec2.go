@@ -191,6 +191,28 @@ func (e *EC2Client) LaunchInstance(ctx context.Context, params LaunchParams) (*t
 		}
 	}
 
+	// Configure Spot instance if requested
+	if params.UseSpot {
+		spotOptions := &types.SpotMarketOptions{
+			SpotInstanceType: types.SpotInstanceTypeOneTime, // Default to one-time
+		}
+
+		// Set spot instance type if specified
+		if params.SpotInstanceType == "persistent" {
+			spotOptions.SpotInstanceType = types.SpotInstanceTypePersistent
+		}
+
+		// Set max price if specified (otherwise uses on-demand price)
+		if params.SpotMaxPrice != "" {
+			spotOptions.MaxPrice = aws.String(params.SpotMaxPrice)
+		}
+
+		runInput.InstanceMarketOptions = &types.InstanceMarketOptionsRequest{
+			MarketType:  types.MarketTypeSpot,
+			SpotOptions: spotOptions,
+		}
+	}
+
 	// Retry logic for IAM propagation delays
 	// AWS IAM is eventually consistent, so we need to retry if the instance profile isn't ready
 	maxRetries := 5
@@ -443,13 +465,16 @@ func (e *EC2Client) DeleteAMI(ctx context.Context, amiID string) error {
 
 // LaunchParams contains all parameters needed to launch a new EC2 instance
 type LaunchParams struct {
-	AMI             string
-	InstanceType    string
-	KeyPairName     string
-	SecurityGroupID string
-	UserData        string
-	EBSVolumeSize   int
-	Environment     string
-	SubnetID        string
-	InstanceProfile string
+	AMI              string
+	InstanceType     string
+	KeyPairName      string
+	SecurityGroupID  string
+	UserData         string
+	EBSVolumeSize    int
+	Environment      string
+	SubnetID         string
+	InstanceProfile  string
+	UseSpot          bool    // Launch as Spot instance (70-90% cost savings)
+	SpotMaxPrice     string  // Optional max price (defaults to on-demand price)
+	SpotInstanceType string  // Either "one-time" or "persistent" (default: one-time)
 }

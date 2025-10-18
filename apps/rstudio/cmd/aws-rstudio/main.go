@@ -50,6 +50,7 @@ Features:
 	rootCmd.AddCommand(cli.NewStatusCmd())
 	rootCmd.AddCommand(cli.NewGenerateCmd())
 	rootCmd.AddCommand(cli.NewKeyCmd())
+	rootCmd.AddCommand(cli.NewExportConfigCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

@@ -1,0 +1,59 @@
+name: "Jupyter Default Configuration"
+description: "Complete Jupyter configuration export including settings, extensions, and kernels"
+app: "jupyter"
+
+# Paths to export from the instance
+export_paths:
+  # Jupyter configuration
+  - path: ".jupyter"
+    description: "Jupyter configuration, extensions, and settings"
+
+  # Jupyter kernels and data
+  - path: ".local/share/jupyter"
+    description: "Jupyter kernels, extensions, and runtime data"
+
+  # Python packages list (for conda or pip)
+  - path: ".pip-packages.txt"
+    description: "List of installed pip packages"
+    generate_command: "pip list --format=freeze > ~/.pip-packages.txt 2>/dev/null || true"
+
+  - path: ".conda-packages.txt"
+    description: "List of installed conda packages"
+    generate_command: "if command -v conda &> /dev/null; then conda list --export > ~/.conda-packages.txt 2>/dev/null || true; fi"
+    optional: true
+
+  # User shell configuration
+  - path: ".bashrc"
+    description: "Bash shell configuration and aliases"
+    optional: true
+
+  # Git configuration
+  - path: ".gitconfig"
+    description: "Git user configuration (name, email, aliases)"
+    optional: true
+
+  # SSH keys (for git authentication)
+  - path: ".ssh"
+    description: "SSH keys for git authentication"
+    optional: true
+    exclude:
+      - ".ssh/known_hosts"
+      - ".ssh/authorized_keys"
+
+# Commands to run after importing configuration to restore state
+restore_commands:
+  # Restore pip packages
+  - description: "Installing Python packages from saved list"
+    command: "if [ -f ~/.pip-packages.txt ]; then pip install -r ~/.pip-packages.txt || true; fi"
+    timeout: 1800  # 30 minutes for package installation
+
+  # Restore conda packages (if conda is available)
+  - description: "Installing conda packages from saved list"
+    command: "if [ -f ~/.conda-packages.txt ] && command -v conda &> /dev/null; then conda install --file ~/.conda-packages.txt || true; fi"
+    timeout: 1800  # 30 minutes for package installation
+    optional: true
+
+  # Set correct permissions for SSH keys
+  - description: "Setting SSH key permissions"
+    command: "if [ -d ~/.ssh ]; then chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* 2>/dev/null || true; fi"
+    timeout: 10

@@ -9,15 +9,15 @@ import (
 )
 
 // GenerateUserData creates a cloud-init user data script for the given environment
-func GenerateUserData(env *pkgconfig.Environment, idleTimeoutSeconds int) (string, error) {
-	script := generateUserDataScript(env, idleTimeoutSeconds)
+func GenerateUserData(env *pkgconfig.Environment, idleTimeoutSeconds int, s3Bucket, s3SyncPath string) (string, error) {
+	script := generateUserDataScript(env, idleTimeoutSeconds, s3Bucket, s3SyncPath)
 	// AWS expects user data to be base64 encoded
 	encoded := base64.StdEncoding.EncodeToString([]byte(script))
 	return encoded, nil
 }
 
 // generateUserDataScript creates the actual bash script
-func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) string {
+func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int, s3Bucket, s3SyncPath string) string {
 	var sb strings.Builder
 
 	// Start with bash shebang and error handling
@@ -54,6 +54,9 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("snap install amazon-ssm-agent --classic\n")
 	sb.WriteString("systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service\n")
 	sb.WriteString("systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service\n\n")
+
+	// GPU detection and driver installation
+	sb.WriteString(generateGPUSetupScript())
 
 	// Install system packages
 	if len(env.Packages) > 0 {
@@ -228,6 +231,14 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 	sb.WriteString("systemctl start jupyter-auto-stop.timer\n")
 	sb.WriteString("echo 'Idle detection system installed and enabled'\n\n")
 
+	// Setup S3 data sync if bucket is specified
+	if s3Bucket != "" {
+		sb.WriteString("# Setup S3 data sync\n")
+		sb.WriteString("log_progress 'Setting up S3 data sync'\n")
+		sb.WriteString(generateS3SyncScript(s3Bucket, s3SyncPath))
+		sb.WriteString("\n")
+	}
+
 	// Final status
 	sb.WriteString("log_progress 'Setup complete - Jupyter Lab is ready'\n")
 	sb.WriteString("echo 'COMPLETE' >> $PROGRESS_LOG\n")
@@ -239,8 +250,8 @@ func generateUserDataScript(env *pkgconfig.Environment, idleTimeoutSeconds int) 
 }
 
 // GetRawUserData returns the user data script without base64 encoding (for debugging)
-func GetRawUserData(env *pkgconfig.Environment, idleTimeoutSeconds int) string {
-	return generateUserDataScript(env, idleTimeoutSeconds)
+func GetRawUserData(env *pkgconfig.Environment, idleTimeoutSeconds int, s3Bucket, s3SyncPath string) string {
+	return generateUserDataScript(env, idleTimeoutSeconds, s3Bucket, s3SyncPath)
 }
 
 // generateIdleMonitorScript creates the idle monitor script
@@ -528,4 +539,207 @@ WantedBy=timers.target
 TIMER_EOF
 
 `, idleTimeoutEnv)
+}
+
+// generateS3SyncScript creates the S3 mounting script using mountpoint-s3
+func generateS3SyncScript(s3Bucket, s3SyncPath string) string {
+	return fmt.Sprintf(`# Install and configure mountpoint-s3 for S3 data sync
+cat > /tmp/setup-s3-sync.sh << 'S3_SYNC_EOF'
+#!/bin/bash
+set -e
+
+# Configuration
+S3_BUCKET="%s"
+MOUNT_PATH="%s"
+LOG_FILE="/var/log/s3-sync-setup.log"
+
+log() {
+    echo "[$(date '+%%Y-%%m-%%d %%H:%%M:%%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "=== Starting S3 sync setup ==="
+log "S3 Bucket: $S3_BUCKET"
+log "Mount Path: $MOUNT_PATH"
+
+# Detect architecture
+ARCH=$(dpkg --print-architecture)
+log "Detected architecture: $ARCH"
+
+# Install mountpoint-s3
+log "Installing mountpoint-s3..."
+if [ "$ARCH" = "arm64" ]; then
+    wget -q https://s3.amazonaws.com/mountpoint-s3-release/latest/arm64/mount-s3.deb -O /tmp/mount-s3.deb
+else
+    wget -q https://s3.amazonaws.com/mountpoint-s3-release/latest/x64/mount-s3.deb -O /tmp/mount-s3.deb
+fi
+
+dpkg -i /tmp/mount-s3.deb || apt-get install -f -y
+rm /tmp/mount-s3.deb
+log "mountpoint-s3 installed successfully"
+
+# Verify installation
+if ! command -v mount-s3 &> /dev/null; then
+    log "ERROR: mount-s3 command not found after installation"
+    exit 1
+fi
+
+# Create mount point directory
+log "Creating mount point directory: $MOUNT_PATH"
+mkdir -p "$MOUNT_PATH"
+chown ubuntu:ubuntu "$MOUNT_PATH"
+
+# Test S3 access
+log "Testing S3 bucket access..."
+if aws s3 ls "s3://$S3_BUCKET" > /dev/null 2>&1; then
+    log "S3 bucket access verified"
+else
+    log "WARNING: Unable to access S3 bucket. Check IAM permissions."
+    log "Required permissions: s3:ListBucket, s3:GetObject, s3:PutObject, s3:DeleteObject"
+    exit 1
+fi
+
+# Create systemd mount unit
+log "Creating systemd mount unit..."
+MOUNT_UNIT_NAME=$(echo "$MOUNT_PATH" | sed 's/\//-/g' | sed 's/^-//')
+cat > /etc/systemd/system/${MOUNT_UNIT_NAME}.mount << EOF
+[Unit]
+Description=Mount S3 bucket ${S3_BUCKET} to ${MOUNT_PATH}
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=${S3_BUCKET}
+Where=${MOUNT_PATH}
+Type=fuse.mount-s3
+Options=allow-delete,allow-other,uid=$(id -u ubuntu),gid=$(id -g ubuntu),region=${AWS_REGION:-us-west-2}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start the mount
+log "Enabling and starting S3 mount..."
+systemctl daemon-reload
+systemctl enable ${MOUNT_UNIT_NAME}.mount
+systemctl start ${MOUNT_UNIT_NAME}.mount
+
+# Wait for mount to be ready
+sleep 5
+
+# Verify mount
+if mountpoint -q "$MOUNT_PATH"; then
+    log "S3 bucket mounted successfully at $MOUNT_PATH"
+    log "Mount status:"
+    df -h "$MOUNT_PATH" | tee -a "$LOG_FILE"
+else
+    log "ERROR: Failed to mount S3 bucket"
+    systemctl status ${MOUNT_UNIT_NAME}.mount | tee -a "$LOG_FILE"
+    exit 1
+fi
+
+# Create a README in the mount point
+cat > ${MOUNT_PATH}/.README << 'README_EOF'
+This directory is mounted from S3 bucket: ${S3_BUCKET}
+
+Files written here are automatically synced to S3.
+Files are cached locally for performance.
+
+Notes:
+- Changes are visible immediately on this instance
+- Other instances accessing the same bucket will see changes
+- Use standard file operations (cp, mv, rm)
+- Large files are streamed rather than cached entirely
+
+For more information: https://github.com/awslabs/mountpoint-s3
+README_EOF
+
+chown ubuntu:ubuntu ${MOUNT_PATH}/.README
+
+log "=== S3 sync setup complete ==="
+log "You can now use $MOUNT_PATH for your data"
+S3_SYNC_EOF
+
+chmod +x /tmp/setup-s3-sync.sh
+/tmp/setup-s3-sync.sh
+rm /tmp/setup-s3-sync.sh
+
+`, s3Bucket, s3SyncPath)
+}
+
+// generateGPUSetupScript creates a script to detect and configure NVIDIA GPUs
+func generateGPUSetupScript() string {
+	return `# GPU detection and driver installation
+cat > /tmp/setup-gpu.sh << 'GPU_SETUP_EOF'
+#!/bin/bash
+set -e
+
+LOG_FILE="/var/log/gpu-setup.log"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "=== Starting GPU detection and setup ==="
+
+# Check if instance has GPU by checking for NVIDIA devices
+if ! lspci | grep -i nvidia > /dev/null 2>&1; then
+    log "No NVIDIA GPU detected. Skipping GPU setup."
+    exit 0
+fi
+
+log "NVIDIA GPU detected! Installing drivers and CUDA toolkit..."
+
+# Get GPU info
+GPU_INFO=$(lspci | grep -i nvidia)
+log "GPU Info: $GPU_INFO"
+
+# Install NVIDIA driver repository
+log "Adding NVIDIA driver repository..."
+apt-get install -y software-properties-common
+add-apt-repository -y ppa:graphics-drivers/ppa
+apt-get update -y
+
+# Install NVIDIA driver (535 series for Ubuntu 24.04)
+log "Installing NVIDIA driver..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y nvidia-driver-535 nvidia-utils-535
+
+# Install CUDA toolkit (12.2 for latest compatibility)
+log "Installing CUDA toolkit..."
+wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+dpkg -i cuda-keyring_1.1-1_all.deb
+apt-get update -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y cuda-toolkit-12-2
+
+# Set up environment variables
+log "Configuring CUDA environment variables..."
+cat >> /etc/environment << 'ENV_EOF'
+CUDA_HOME=/usr/local/cuda
+PATH=/usr/local/cuda/bin:$PATH
+LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+ENV_EOF
+
+# Also add to ubuntu user's bashrc
+cat >> /home/ubuntu/.bashrc << 'BASHRC_EOF'
+export CUDA_HOME=/usr/local/cuda
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+BASHRC_EOF
+
+# Create symlink for CUDA if needed
+if [ ! -L /usr/local/cuda ]; then
+    ln -s /usr/local/cuda-12.2 /usr/local/cuda
+fi
+
+log "GPU drivers and CUDA toolkit installed successfully"
+log "Note: A reboot is required for GPU drivers to be fully active"
+log "nvidia-smi will be available after the instance restarts"
+
+log "=== GPU setup complete ==="
+GPU_SETUP_EOF
+
+chmod +x /tmp/setup-gpu.sh
+/tmp/setup-gpu.sh || echo "GPU setup encountered an error, continuing with instance launch..."
+rm /tmp/setup-gpu.sh
+
+`
 }

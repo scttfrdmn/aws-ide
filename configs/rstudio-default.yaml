@@ -1,0 +1,48 @@
+name: "RStudio Default Configuration"
+description: "Complete RStudio configuration export including IDE settings, R packages, and user preferences"
+app: "rstudio"
+
+# Paths to export from the instance
+export_paths:
+  # RStudio IDE settings
+  - path: ".config/rstudio"
+    description: "RStudio IDE preferences, themes, pane layout, keyboard shortcuts"
+
+  # R user configuration
+  - path: ".Rprofile"
+    description: "R startup script with custom functions and options"
+    optional: true
+
+  - path: ".Renviron"
+    description: "R environment variables (API keys, paths, etc.)"
+    optional: true
+
+  # R package list (metadata only, not the actual packages)
+  - path: ".local/share/rstudio/installed_packages.txt"
+    description: "List of installed R packages"
+    generate_command: "mkdir -p ~/.local/share/rstudio && R --quiet --no-save -e 'writeLines(rownames(installed.packages()), \"~/.local/share/rstudio/installed_packages.txt\")'"
+
+  # Git configuration
+  - path: ".gitconfig"
+    description: "Git user configuration (name, email, aliases)"
+    optional: true
+
+  # SSH keys (for git authentication)
+  - path: ".ssh"
+    description: "SSH keys for git authentication"
+    optional: true
+    exclude:
+      - ".ssh/known_hosts"
+      - ".ssh/authorized_keys"
+
+# Commands to run after importing configuration to restore state
+restore_commands:
+  # Restore R packages
+  - description: "Installing R packages from saved list"
+    command: "if [ -f ~/.local/share/rstudio/installed_packages.txt ]; then R --quiet --no-save -e 'pkgs <- readLines(\"~/.local/share/rstudio/installed_packages.txt\"); new_pkgs <- pkgs[!(pkgs %in% installed.packages()[,\"Package\"])]; if(length(new_pkgs)) install.packages(new_pkgs, repos=\"https://cloud.r-project.org/\", dependencies=TRUE)'; fi"
+    timeout: 3600  # 1 hour for package installation
+
+  # Set correct permissions for SSH keys
+  - description: "Setting SSH key permissions"
+    command: "if [ -d ~/.ssh ]; then chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* 2>/dev/null || true; fi"
+    timeout: 10
