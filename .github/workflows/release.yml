@@ -3,9 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'jupyter/v*'
-      - 'vscode/v*'
-      - 'rstudio/v*'
+      - 'v*'
 
 permissions:
   contents: write
