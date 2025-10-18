@@ -1,6 +1,6 @@
 module github.com/scttfrdmn/aws-ide/apps/vscode
 
-go 1.25.1
+go 1.22
 
 replace github.com/scttfrdmn/aws-ide/pkg => ../../pkg
 
