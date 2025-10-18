@@ -87,10 +87,10 @@ Complete the monorepo migration and establish RStudio as a first-class citizen a
 
 ---
 
-## 🧪 v0.6.0 - Testing & Quality (Q1 2025)
+## 🧪 v0.6.0 - Testing & Quality (Q3-Q4 2025)
 
-**Status:** In Progress
-**Target Date:** March 2025
+**Status:** ✅ Complete
+**Completion Date:** October 2025
 **Priority:** HIGH
 
 ### Goals
@@ -175,14 +175,14 @@ Establish comprehensive testing infrastructure with unit, integration, and E2E t
 - ✅ Smoke tests for quick validation
 - ✅ Integration tests covering major AWS operations
 - ✅ E2E tests for all three apps (Jupyter, RStudio, VSCode)
-- ⏳ CI/CD running unit + integration tests automatically
+- ✅ CI/CD running unit + integration tests automatically
 
 ---
 
-## ✨ v0.7.0 - User Experience (Q2 2025)
+## ✨ v0.7.0 - User Experience (Q4 2025 - Q1 2026)
 
 **Status:** Planned
-**Target Date:** April 2025
+**Target Date:** December 2025
 **Priority:** MEDIUM
 
 ### Goals
@@ -512,10 +512,10 @@ We follow [Semantic Versioning 2.0.0](https://semver.org/):
 
 ## 📝 Last Updated
 
-- **Date:** January 2025
-- **Version:** v0.5.0 (Monorepo Migration - In Progress)
-- **Next Review:** February 2025
-- **Project Status:** Transitioning from single app to multi-IDE platform
+- **Date:** October 2025
+- **Version:** v0.6.0 (Testing & Quality - Complete)
+- **Next Review:** December 2025
+- **Project Status:** Multi-IDE platform with comprehensive testing infrastructure
 
 ---
 
