@@ -17,12 +17,12 @@ func TestCleanupStateFile_EmptyDeletedAMIs(t *testing.T) {
 
 	// Save original state file path and restore after test
 	originalStateFile := os.Getenv("AWS_IDE_STATE_FILE")
-	os.Setenv("AWS_IDE_STATE_FILE", stateFile)
+	_ = os.Setenv("AWS_IDE_STATE_FILE", stateFile)
 	defer func() {
 		if originalStateFile != "" {
-			os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
+			_ = os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
 		} else {
-			os.Unsetenv("AWS_IDE_STATE_FILE")
+			_ = os.Unsetenv("AWS_IDE_STATE_FILE")
 		}
 	}()
 
@@ -67,12 +67,12 @@ func TestCleanupStateFile_WithDeletedAMIs(t *testing.T) {
 	stateFile := filepath.Join(tempDir, "state.json")
 
 	originalStateFile := os.Getenv("AWS_IDE_STATE_FILE")
-	os.Setenv("AWS_IDE_STATE_FILE", stateFile)
+	_ = os.Setenv("AWS_IDE_STATE_FILE", stateFile)
 	defer func() {
 		if originalStateFile != "" {
-			os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
+			_ = os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
 		} else {
-			os.Unsetenv("AWS_IDE_STATE_FILE")
+			_ = os.Unsetenv("AWS_IDE_STATE_FILE")
 		}
 	}()
 
@@ -139,12 +139,12 @@ func TestCleanupStateFile_StateFileNotFound(t *testing.T) {
 	stateFile := filepath.Join(tempDir, "nonexistent.json")
 
 	originalStateFile := os.Getenv("AWS_IDE_STATE_FILE")
-	os.Setenv("AWS_IDE_STATE_FILE", stateFile)
+	_ = os.Setenv("AWS_IDE_STATE_FILE", stateFile)
 	defer func() {
 		if originalStateFile != "" {
-			os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
+			_ = os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
 		} else {
-			os.Unsetenv("AWS_IDE_STATE_FILE")
+			_ = os.Unsetenv("AWS_IDE_STATE_FILE")
 		}
 	}()
 
@@ -170,12 +170,12 @@ func TestCleanupStateFile_InvalidStateFile(t *testing.T) {
 	stateFile := filepath.Join(tempDir, "invalid.json")
 
 	originalStateFile := os.Getenv("AWS_IDE_STATE_FILE")
-	os.Setenv("AWS_IDE_STATE_FILE", stateFile)
+	_ = os.Setenv("AWS_IDE_STATE_FILE", stateFile)
 	defer func() {
 		if originalStateFile != "" {
-			os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
+			_ = os.Setenv("AWS_IDE_STATE_FILE", originalStateFile)
 		} else {
-			os.Unsetenv("AWS_IDE_STATE_FILE")
+			_ = os.Unsetenv("AWS_IDE_STATE_FILE")
 		}
 	}()
 
