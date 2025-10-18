@@ -91,7 +91,7 @@ func AWSResourceNotFoundError(resource string, resourceID string, cause error) *
 		WithContext(fmt.Sprintf("The %s '%s' does not exist or is not accessible.", resource, resourceID)).
 		WithSuggestions(
 			"Check if the resource exists in your AWS account",
-			fmt.Sprintf("Verify you're using the correct region"),
+			"Verify you're using the correct region",
 			"List available resources with the appropriate aws-ide command",
 		)
 }
