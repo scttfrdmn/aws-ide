@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         go: ['1.22', '1.23']
-        module: ['pkg', 'jupyter', 'rstudio']
+        module: ['pkg', 'jupyter', 'rstudio', 'vscode']
 
     steps:
       - name: Check out code
@@ -58,6 +58,18 @@ jobs:
         if: matrix.module == 'rstudio'
         run: |
           cd apps/rstudio
+          go test -v -race ./... || echo "No tests yet"
+
+      - name: Get dependencies (vscode)
+        if: matrix.module == 'vscode'
+        run: |
+          cd apps/vscode
+          go mod download
+
+      - name: Run tests (vscode)
+        if: matrix.module == 'vscode'
+        run: |
+          cd apps/vscode
           go test -v -race ./... || echo "No tests yet"
 
       # Coverage upload disabled - codecov integration can be re-enabled later if needed
@@ -105,6 +117,11 @@ jobs:
           cd apps/rstudio
           go vet ./...
 
+      - name: Run go vet (vscode)
+        run: |
+          cd apps/vscode
+          go vet ./...
+
       - name: Run golangci-lint (pkg)
         uses: golangci/golangci-lint-action@v4
         with:
@@ -126,12 +143,19 @@ jobs:
           working-directory: apps/rstudio
           args: --timeout=5m
 
+      - name: Run golangci-lint (vscode)
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: apps/vscode
+          args: --timeout=5m
+
   build:
     name: Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: ['jupyter', 'rstudio']
+        app: ['jupyter', 'rstudio', 'vscode']
 
     steps:
       - name: Check out code
