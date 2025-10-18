@@ -26,8 +26,8 @@ type Instance struct {
 	Region        string    `json:"region"`
 	SecurityGroup string    `json:"security_group"`
 	AMIBase       string    `json:"ami_base,omitempty"`
-	S3Bucket      string    `json:"s3_bucket,omitempty"`      // S3 bucket for data sync
-	S3MountPath   string    `json:"s3_mount_path,omitempty"`  // Local path where S3 is mounted
+	S3Bucket      string    `json:"s3_bucket,omitempty"`     // S3 bucket for data sync
+	S3MountPath   string    `json:"s3_mount_path,omitempty"` // Local path where S3 is mounted
 }
 
 // LocalState manages the local state file tracking active instances

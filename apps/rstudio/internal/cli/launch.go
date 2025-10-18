@@ -800,5 +800,5 @@ func waitForRStudioReady(ctx context.Context, ssmClient *aws.SSMClient, instance
 		return nil
 	}
 
-	return fmt.Errorf(result.Message)
+	return fmt.Errorf("%s", result.Message)
 }

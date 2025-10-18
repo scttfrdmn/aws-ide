@@ -10,11 +10,11 @@ import (
 
 // ExportPath defines a file or directory path to export from an instance
 type ExportPath struct {
-	Path             string   `yaml:"path"`
-	Description      string   `yaml:"description"`
-	Optional         bool     `yaml:"optional,omitempty"`
-	GenerateCommand  string   `yaml:"generate_command,omitempty"`
-	Exclude          []string `yaml:"exclude,omitempty"`
+	Path            string   `yaml:"path"`
+	Description     string   `yaml:"description"`
+	Optional        bool     `yaml:"optional,omitempty"`
+	GenerateCommand string   `yaml:"generate_command,omitempty"`
+	Exclude         []string `yaml:"exclude,omitempty"`
 }
 
 // RestoreCommand defines a command to run after importing configuration

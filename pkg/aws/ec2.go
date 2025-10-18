@@ -474,7 +474,7 @@ type LaunchParams struct {
 	Environment      string
 	SubnetID         string
 	InstanceProfile  string
-	UseSpot          bool    // Launch as Spot instance (70-90% cost savings)
-	SpotMaxPrice     string  // Optional max price (defaults to on-demand price)
-	SpotInstanceType string  // Either "one-time" or "persistent" (default: one-time)
+	UseSpot          bool   // Launch as Spot instance (70-90% cost savings)
+	SpotMaxPrice     string // Optional max price (defaults to on-demand price)
+	SpotInstanceType string // Either "one-time" or "persistent" (default: one-time)
 }
