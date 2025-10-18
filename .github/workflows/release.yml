@@ -22,35 +22,11 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Determine app and version
-        id: vars
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-          if [[ $TAG == jupyter/* ]]; then
-            echo "app=jupyter" >> $GITHUB_OUTPUT
-            echo "dir=apps/jupyter" >> $GITHUB_OUTPUT
-            echo "version=${TAG#jupyter/}" >> $GITHUB_OUTPUT
-          elif [[ $TAG == vscode/* ]]; then
-            echo "app=vscode" >> $GITHUB_OUTPUT
-            echo "dir=apps/vscode" >> $GITHUB_OUTPUT
-            echo "version=${TAG#vscode/}" >> $GITHUB_OUTPUT
-          elif [[ $TAG == rstudio/* ]]; then
-            echo "app=rstudio" >> $GITHUB_OUTPUT
-            echo "dir=apps/rstudio" >> $GITHUB_OUTPUT
-            echo "version=${TAG#rstudio/}" >> $GITHUB_OUTPUT
-          else
-            echo "Unknown app in tag: $TAG"
-            exit 1
-          fi
-
-      - name: Run GoReleaser for ${{ steps.vars.outputs.app }}
+      - name: Run GoReleaser for monorepo
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
           args: release --clean
-          workdir: ${{ steps.vars.outputs.dir }}
         env:
           GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
