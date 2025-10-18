@@ -46,27 +46,28 @@ jobs:
         if: matrix.module == 'pkg'
         run: |
           cd pkg
-          go test -v -race -coverprofile=coverage.out ./...
+          go test -v -race ./...
 
       - name: Run tests (jupyter)
         if: matrix.module == 'jupyter'
         run: |
           cd apps/jupyter
-          go test -v -race -coverprofile=coverage.out ./...
+          go test -v -race ./...
 
       - name: Run tests (rstudio)
         if: matrix.module == 'rstudio'
         run: |
           cd apps/rstudio
-          go test -v -race -coverprofile=coverage.out ./... || echo "No tests yet"
+          go test -v -race ./... || echo "No tests yet"
 
-      - name: Upload coverage to Codecov
-        if: matrix.go == '1.22'
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./${{ matrix.module == 'pkg' && 'pkg' || format('apps/{0}', matrix.module) }}/coverage.out
-          flags: ${{ matrix.module }}
-          fail_ci_if_error: false
+      # Coverage upload disabled - codecov integration can be re-enabled later if needed
+      # - name: Upload coverage to Codecov
+      #   if: matrix.go == '1.22'
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     file: ./${{ matrix.module == 'pkg' && 'pkg' || format('apps/{0}', matrix.module) }}/coverage.out
+      #     flags: ${{ matrix.module }}
+      #     fail_ci_if_error: false
 
   lint:
     name: Lint
