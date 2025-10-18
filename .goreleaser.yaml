@@ -195,6 +195,7 @@ brews:
     repository:
       owner: scttfrdmn
       name: homebrew-tap
+    folder: Formula
     homepage: https://github.com/scttfrdmn/aws-ide
     description: CLI tool for launching Jupyter Lab instances on AWS EC2 Graviton processors
     license: Apache-2.0
@@ -216,6 +217,7 @@ brews:
     repository:
       owner: scttfrdmn
       name: homebrew-tap
+    folder: Formula
     homepage: https://github.com/scttfrdmn/aws-ide
     description: CLI tool for launching RStudio Server instances on AWS EC2 Graviton processors
     license: Apache-2.0
@@ -237,6 +239,7 @@ brews:
     repository:
       owner: scttfrdmn
       name: homebrew-tap
+    folder: Formula
     homepage: https://github.com/scttfrdmn/aws-ide
     description: CLI tool for launching VSCode Server instances on AWS EC2 Graviton processors (Beta)
     license: Apache-2.0
