@@ -5,12 +5,13 @@ import (
 	"os"
 
 	"github.com/scttfrdmn/aws-ide/apps/jupyter/internal/cli"
+	"github.com/scttfrdmn/aws-ide/pkg"
 	"github.com/scttfrdmn/aws-ide/pkg/config"
 	"github.com/spf13/cobra"
 )
 
 var (
-	version = "0.6.0"
+	version = "0.6.0" // App version
 	commit  = "unknown"
 	date    = "unknown"
 )
@@ -33,7 +34,7 @@ Features:
 • Smart security groups and key management
 • Built-in environments for data science, ML, and research
 • Cost-aware infrastructure with reuse strategies`,
-		Version: fmt.Sprintf("v%s (commit: %s, date: %s)", version, commit, date),
+		Version: fmt.Sprintf("v%s (platform: v%s, commit: %s, date: %s)", version, pkg.Version, commit, date),
 	}
 
 	// Add subcommands

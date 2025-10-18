@@ -13,7 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This release adds four major features plus a configuration management system to improve the first-run experience.
 
+**Versioning**: This release establishes dual versioning (Platform v1.0.0 + App v0.6.0). See [VERSIONING.md](VERSIONING.md) for details.
+
 ### Added
+
+#### Dual Versioning System
+- Introduced platform versioning (`pkg/v1.0.0`) for shared infrastructure stability tracking
+- Added `pkg/version.go` with platform version constant
+- Updated all app `--version` outputs to show both app and platform versions
+  - Example: `aws-jupyter version v0.6.0 (platform: v1.0.0, ...)`
+- Created comprehensive [VERSIONING.md](VERSIONING.md) documentation
+- Platform v1.0.0 establishes stable API contract for shared infrastructure
 
 #### Spot Instance Support
 - Add `--spot` flag to launch commands for cost-optimized instances (up to 90% savings)

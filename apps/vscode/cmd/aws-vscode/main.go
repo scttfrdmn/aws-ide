@@ -5,12 +5,13 @@ import (
 	"os"
 
 	"github.com/scttfrdmn/aws-ide/apps/vscode/internal/cli"
+	"github.com/scttfrdmn/aws-ide/pkg"
 	"github.com/scttfrdmn/aws-ide/pkg/config"
 	"github.com/spf13/cobra"
 )
 
 var (
-	version = "0.6.0"
+	version = "0.6.0" // App version
 	commit  = "unknown"
 	date    = "unknown"
 )
@@ -35,7 +36,7 @@ Features:
 • Built-in environments for web, Python, Go, and fullstack development
 • Cost-aware infrastructure with reuse strategies
 • Automatic extension installation`,
-		Version: fmt.Sprintf("v%s (commit: %s, date: %s)", version, commit, date),
+		Version: fmt.Sprintf("v%s (platform: v%s, commit: %s, date: %s)", version, pkg.Version, commit, date),
 	}
 
 	// Add subcommands

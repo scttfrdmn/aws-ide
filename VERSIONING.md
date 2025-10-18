@@ -1,221 +1,188 @@
 # Versioning Strategy
 
-AWS IDE uses **independent versioning** for each application in the monorepo. This allows us to release updates to individual apps without unnecessarily bumping versions for unchanged apps.
+AWS IDE uses a **dual versioning system** to track both platform stability and application-specific features independently.
 
-## Version Format
-
-Each app follows [Semantic Versioning](https://semver.org/):
-- **MAJOR**: Incompatible API changes
-- **MINOR**: New functionality (backwards compatible)
-- **PATCH**: Bug fixes (backwards compatible)
-
-## Git Tag Format
-
-We use app-prefixed Git tags:
+## Overview
 
 ```
-<app>/<version>
+App Version: v0.6.0 (platform: v1.0.0)
+             ^^^^^            ^^^^^
+             │                └─ Platform/Infrastructure Version
+             └─ Application Version
 ```
 
-### Examples:
-- `jupyter/v0.5.0` - Jupyter Lab launcher version 0.5.0
-- `vscode/v0.1.0` - VSCode Server launcher version 0.1.0
-- `rstudio/v0.5.0` - RStudio Server launcher version 0.5.0
+- **Platform Version** (`pkg/` module): Tracks shared infrastructure API stability
+- **App Version** (individual apps): Tracks application-specific features
 
 ## Current Versions
 
-| App | Version | Status |
-|-----|---------|--------|
-| aws-jupyter | 0.5.0 | Stable |
-| aws-vscode | 0.1.0 | Alpha |
-| aws-rstudio | 0.5.0 | Beta |
+| Component | Version | Status |
+|-----------|---------|--------|
+| Platform (`pkg/`) | v1.0.0 | Stable |
+| aws-jupyter | v0.6.0 | Stable |
+| aws-rstudio | v0.6.0 | Stable |
+| aws-vscode | v0.6.0 | Beta |
 
-## When to Release
+## Platform Version (`pkg/` module)
 
-### App-Specific Changes
-If you modify **only one app** (files in `apps/<name>/`):
-- Tag and release only that app
-- Other apps remain at their current versions
+**Location**: `pkg/version.go`
+**Current Version**: `v1.0.0`
+**Git Tag Format**: `pkg/v1.0.0`
 
-**Example:**
-```bash
-# Fix bug in aws-vscode only
-git tag vscode/v0.1.1
-git push origin vscode/v0.1.1
+### Semantic Versioning Rules
+
+- **MAJOR** (`X.0.0`): Breaking changes to `pkg/` APIs
+  - Changed function signatures
+  - Removed public functions/types
+  - Modified struct fields (breaking)
+
+- **MINOR** (`1.X.0`): New features (backward compatible)
+  - New public functions/types
+  - New packages under `pkg/`
+
+- **PATCH** (`1.0.X`): Bug fixes (backward compatible)
+  - Internal bug fixes
+  - Performance improvements
+
+### Platform v1.0.0 Stable APIs
+
+- `pkg/aws/ec2.go`: EC2 client and instance management
+- `pkg/aws/iam.go`: IAM role and instance profile management
+- `pkg/aws/networking.go`: VPC, subnet, security group management
+- `pkg/aws/ssm.go`: SSM client and service readiness
+- `pkg/config/state.go`: Instance state management
+- `pkg/config/environment.go`: Environment configuration
+- `pkg/config/keys.go`: SSH key management
+
+## Application Versions
+
+**Current**: All apps at `v0.6.0`
+**Git Tag Format**: `v0.6.0` (unified) or `jupyter/v0.7.0` (app-specific)
+
+### Semantic Versioning Rules
+
+- **MAJOR** (`X.0.0`): Breaking CLI changes
+  - Removed commands or flags
+  - Changed command syntax
+
+- **MINOR** (`0.X.0`): New features (backward compatible)
+  - New commands
+  - New flags
+  - New environments
+
+- **PATCH** (`0.6.X`): Bug fixes
+  - Bug fixes
+  - Documentation updates
+
+### Unified vs Independent Versioning
+
+**Currently**: Unified versioning (`v0.6.0` for all apps)
+
+**Future option**: Independent versioning if apps diverge significantly
+```
+aws-jupyter@0.8.0   (got new features)
+aws-rstudio@0.6.1   (only bug fixes)
+aws-vscode@0.7.0    (got new features)
 ```
 
-### Shared Infrastructure Changes
-If you modify **shared code** (`pkg/` module) that affects multiple apps:
-- Consider which apps are actually impacted
-- Release only the affected apps
-- Coordinate version bumps if needed
+## Git Tag Strategy
 
-**Example:**
+### Current Tags
+- **`v0.6.0`**: Unified release (all apps at v0.6.0, platform v1.0.0)
+- **`pkg/v1.0.0`**: Platform version
+
+### Future Options
+
+**Option 1: Continue unified** (current)
 ```bash
-# Fix IAM propagation bug in pkg/aws/ec2.go
-# All apps use this, so release all three
-git tag jupyter/v0.5.1
-git tag vscode/v0.1.1
-git tag rstudio/v0.5.1
-git push origin --tags
+git tag v0.7.0       # All apps at v0.7.0
+git tag pkg/v1.1.0   # Platform gets new features
 ```
 
-### Breaking Changes in Shared Code
-If you make breaking changes to `pkg/`:
-- Bump MAJOR version for all affected apps
-- Update all app code to work with new API
-- Release all apps together
+**Option 2: Independent apps** (if divergence occurs)
+```bash
+git tag jupyter/v0.8.0   # Only Jupyter updated
+git tag rstudio/v0.6.1   # Only RStudio patched
+```
 
-## Release Process
+## Version Check
 
-### 1. Update Version in Code
-Edit `apps/<name>/cmd/aws-<name>/main.go`:
+### Check App Version
+```bash
+aws-jupyter --version
+# Output: aws-jupyter version v0.6.0 (platform: v1.0.0, ...)
+```
+
+### Check Platform Version (in code)
 ```go
-var (
-    version = "0.5.1"  // Update this
-    commit  = "unknown"
-    date    = "unknown"
-)
+import "github.com/scttfrdmn/aws-ide/pkg"
+
+fmt.Printf("Platform: %s\n", pkg.Version)
 ```
 
-### 2. Update CHANGELOG.md
-Document changes in the `[Unreleased]` section.
+## Release Workflows
 
-### 3. Create Git Tag
-```bash
-git tag <app>/v<version>
-git push origin <app>/v<version>
-```
+### Regular Feature Release (Unified)
+1. Implement features
+2. Update app versions in `apps/*/cmd/*/main.go`
+3. Update CHANGELOG.md
+4. Create tag: `git tag v0.7.0`
+5. Push: `git push origin v0.7.0`
 
-### 4. GitHub Actions
-The release workflow automatically:
-- Detects which app from the tag prefix
-- Runs GoReleaser in the correct `apps/<name>/` directory
-- Builds cross-platform binaries
-- Creates GitHub release
-- Updates Homebrew tap
+### Platform Breaking Change
+1. Make breaking changes to `pkg/`
+2. Update `pkg/version.go`: bump MAJOR (`1.0.0` → `2.0.0`)
+3. Update all apps to work with new API
+4. Bump app versions (likely MAJOR)
+5. Create tags:
+   ```bash
+   git tag pkg/v2.0.0
+   git tag v1.0.0
+   git push origin pkg/v2.0.0 v1.0.0
+   ```
 
-## GoReleaser Configuration
+### Platform Feature (Backward Compatible)
+1. Add features to `pkg/`
+2. Update `pkg/version.go`: bump MINOR (`1.0.0` → `1.1.0`)
+3. Create tag: `git tag pkg/v1.1.0`
+4. Apps adopt new features in future releases
 
-Each app has its own `.goreleaser.yaml` in `apps/<name>/`:
-- `apps/jupyter/.goreleaser.yaml`
-- `apps/vscode/.goreleaser.yaml`
-- `apps/rstudio/.goreleaser.yaml`
+## Version Compatibility
 
-The root `.goreleaser.yaml` is **deprecated** and should not be used.
+| Platform Version | Compatible App Versions |
+|-----------------|------------------------|
+| `pkg/v1.0.0`    | `v0.6.0+`              |
+| `pkg/v1.1.0`    | `v0.6.0+`, `v0.7.0+`   |
+| `pkg/v2.0.0`    | `v1.0.0+`              |
 
-## Benefits
+## FAQ
 
-### Independent Releases
-- Fix aws-vscode bugs without releasing jupyter/rstudio
-- Users only update what they need
-- Clearer release history per app
+### Why dual versioning?
 
-### Clear Changelogs
-- Each release note shows exactly what app changed
-- Easier to track which features are in which version
-- Better user experience
+- **Clarity**: Distinguish platform stability from app features
+- **Flexibility**: Apps can evolve while sharing stable infrastructure
+- **Maintenance**: Platform can be versioned independently
 
-### Flexible Development
-- Work on experimental features in one app
-- Keep stable apps at stable versions
-- Alpha/Beta/Stable can coexist
+### When to split app versions?
 
-## Migration from Shared Versioning
+**Keep unified while**:
+- Apps are released together
+- Features span multiple apps
+- Simplicity is valued
 
-**Previous approach (v0.5.0 and earlier):**
-- Single Git tag (`v0.5.0`)
-- All apps released together
-- Root `.goreleaser.yaml`
+**Split when**:
+- Apps diverge significantly
+- Different release cadences emerge
+- Users want stability in one app while another experiments
 
-**New approach (v0.6.0+):**
-- App-prefixed tags (`jupyter/v0.5.1`)
-- Independent app releases
-- Per-app `.goreleaser.yaml`
-
-The old root `.goreleaser.yaml` remains for reference but should not be used for new releases.
-
-## Examples
-
-### Example 1: Bug Fix in aws-vscode Only
+### How do I know which platform version an app requires?
 
 ```bash
-# Make changes to apps/vscode/
-vim apps/vscode/internal/config/userdata.go
-
-# Update version
-vim apps/vscode/cmd/aws-vscode/main.go  # 0.1.0 → 0.1.1
-
-# Update changelog
-vim CHANGELOG.md
-
-# Commit and tag
-git add .
-git commit -m "fix(vscode): set HOME environment variable for code-server"
-git tag vscode/v0.1.1
-git push origin main vscode/v0.1.1
+aws-jupyter --version
+# aws-jupyter version v0.6.0 (platform: v1.0.0, ...)
 ```
 
-**Result:** Only aws-vscode v0.1.1 is released. aws-jupyter and aws-rstudio remain at their current versions.
-
-### Example 2: New Feature in Shared pkg/
-
-```bash
-# Add automatic retry logic to pkg/aws/ec2.go
-vim pkg/aws/ec2.go
-
-# Test with all apps
-cd apps/jupyter && go test ./...
-cd ../vscode && go test ./...
-cd ../rstudio && go test ./...
-
-# Update versions for all apps
-vim apps/jupyter/cmd/aws-jupyter/main.go  # 0.5.0 → 0.5.1
-vim apps/vscode/cmd/aws-vscode/main.go    # 0.1.0 → 0.1.1
-vim apps/rstudio/cmd/aws-rstudio/main.go  # 0.5.0 → 0.5.1
-
-# Update changelog
-vim CHANGELOG.md
-
-# Commit and tag all apps
-git add .
-git commit -m "fix: add automatic retry logic for IAM propagation delays"
-git tag jupyter/v0.5.1
-git tag vscode/v0.1.1
-git tag rstudio/v0.5.1
-git push origin main --tags
-```
-
-**Result:** All three apps get new releases with the shared infrastructure fix.
-
-### Example 3: Major aws-jupyter Update
-
-```bash
-# Complete rewrite of jupyter environments system
-vim apps/jupyter/internal/config/environment.go
-
-# Breaking change: bump MAJOR version
-vim apps/jupyter/cmd/aws-jupyter/main.go  # 0.5.1 → 1.0.0
-
-# Update changelog
-vim CHANGELOG.md
-
-# Commit and tag
-git add .
-git commit -m "feat(jupyter)!: redesign environment configuration system"
-git tag jupyter/v1.0.0
-git push origin main jupyter/v1.0.0
-```
-
-**Result:** Only aws-jupyter gets v1.0.0. Other apps unaffected.
-
-## Questions?
-
-If you're unsure which apps to release:
-1. Identify which files changed (`git diff`)
-2. If only `apps/<name>/` changed → release that app only
-3. If `pkg/` changed → test all apps and release affected ones
-4. When in doubt, release all apps (safe but creates more releases)
+The `platform: v1.0.0` shows the required platform version.
 
 ## See Also
 
