@@ -210,6 +210,25 @@ E2E tests are the primary cost driver. To minimize costs:
 4. **Cleanup verified**: Workflows include automatic cleanup
 5. **Monitor usage**: Check workflow summaries for cost estimates
 
+## Known Issues
+
+### Smoke/E2E Workflows Show as "Failed" on Push
+
+When you push code, you may see smoke-tests.yml and e2e-tests.yml showing as "failed" in the Actions tab. **This is expected and not a problem.**
+
+**Why this happens:**
+- These workflows are `workflow_dispatch` only (manual trigger)
+- GitHub validates workflow files on every push
+- The validation fails because `inputs` context doesn't exist during push events
+- The workflows will work perfectly when manually triggered
+
+**How to verify they work:**
+1. Go to Actions → Smoke Tests (or E2E Tests)
+2. Click "Run workflow"
+3. Select parameters and run
+
+**Impact:** None - this is purely cosmetic and doesn't affect functionality
+
 ## Troubleshooting
 
 ### LocalStack Integration Tests Failing

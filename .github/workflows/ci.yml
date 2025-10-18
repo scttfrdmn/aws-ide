@@ -160,15 +160,14 @@ jobs:
         image: localstack/localstack:latest
         env:
           SERVICES: ec2,iam,ssm
-          DEBUG: 1
-          DOCKER_HOST: unix:///var/run/docker.sock
+          DEBUG: 0
         ports:
           - 4566:4566
         options: >-
-          --health-cmd "awslocal ec2 describe-regions || exit 1"
+          --health-cmd "curl -s http://localhost:4566/_localstack/health | grep -q '\"initialized\": true' || exit 1"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - name: Check out code
@@ -179,11 +178,19 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Wait for LocalStack
+      - name: Wait for LocalStack services
         run: |
-          echo "Waiting for LocalStack to be ready..."
-          timeout 120 bash -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"ec2\": \"available\""; do sleep 2; done'
-          echo "LocalStack is ready"
+          echo "Waiting for LocalStack EC2 service..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4566/_localstack/health | grep -q '"ec2".*"available"'; then
+              echo "✓ LocalStack EC2 is ready"
+              exit 0
+            fi
+            echo "Attempt $i/30: EC2 not ready yet, waiting..."
+            sleep 2
+          done
+          echo "✗ LocalStack EC2 failed to become ready"
+          exit 1
 
       - name: Run integration tests (pkg)
         env:
