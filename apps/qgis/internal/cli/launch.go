@@ -2,8 +2,10 @@ package cli
 
 // Future enhancements to consider:
 // 1. Launch throttling - prevent too many concurrent launches or rapid successive launches
+//    See: https://github.com/scttfrdmn/lens/issues/49
 // 2. System sleep/wake detection - detect when local system goes to sleep/wakes up
 //    and optionally hibernate remote Lens instances to save costs when user is away
+//    See: https://github.com/scttfrdmn/lens/issues/50
 
 import (
 	"context"
