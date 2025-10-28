@@ -60,7 +60,13 @@ func (a *AMISelector) findUbuntuAMI(ctx context.Context, client *EC2Client, vers
 		return "", fmt.Errorf("unsupported Ubuntu version: %s", version)
 	}
 
-	namePattern := fmt.Sprintf("ubuntu/images/hvm-ssd/ubuntu-%s-%s-%s-server-*", codename, version, arch)
+	// Convert x86_64 to amd64 for Ubuntu AMI naming
+	amiArch := arch
+	if arch == "x86_64" {
+		amiArch = "amd64"
+	}
+
+	namePattern := fmt.Sprintf("ubuntu/images/hvm-ssd/ubuntu-%s-%s-%s-server-*", codename, version, amiArch)
 
 	var archType types.ArchitectureValues
 	if arch == "arm64" {
