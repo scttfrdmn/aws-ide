@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	qgisconfig "github.com/scttfrdmn/lens/apps/qgis/internal/config"
@@ -34,16 +35,17 @@ const (
 // NewLaunchCmd creates the launch command for starting new QGIS instances
 func NewLaunchCmd() *cobra.Command {
 	var (
-		environment      string
-		instanceType     string
-		idleTimeout      string
-		profile          string
-		region           string
-		availabilityZone string
-		dryRun           bool
-		connectionMethod string
-		subnetType       string
-		createNatGateway bool
+		environment        string
+		instanceType       string
+		idleTimeout        string
+		profile            string
+		region             string
+		availabilityZone   string
+		dryRun             bool
+		connectionMethod   string
+		subnetType         string
+		createNatGateway   bool
+		skipSystemUpgrade  bool
 	)
 
 	cmd := &cobra.Command{
@@ -54,7 +56,7 @@ func NewLaunchCmd() *cobra.Command {
 QGIS will be accessible via browser on https://localhost:8443 after
 setting up port forwarding with the connect command.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone, dryRun, connectionMethod, subnetType, createNatGateway)
+			return runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone, dryRun, connectionMethod, subnetType, createNatGateway, skipSystemUpgrade)
 		},
 	}
 
@@ -68,6 +70,7 @@ setting up port forwarding with the connect command.`,
 	cmd.Flags().StringVarP(&connectionMethod, "connection", "c", "session-manager", "Connection method: ssh or session-manager")
 	cmd.Flags().StringVarP(&subnetType, "subnet-type", "s", "public", "Subnet type: public or private")
 	cmd.Flags().BoolVar(&createNatGateway, "create-nat-gateway", false, "Create NAT Gateway for private subnet internet access")
+	cmd.Flags().BoolVar(&skipSystemUpgrade, "skip-system-upgrade", true, "Skip apt-get upgrade for faster setup (default: true)")
 
 	return cmd
 }
@@ -100,7 +103,7 @@ func parseDuration(s string) (int, error) {
 	}
 }
 
-func runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway bool) error {
+func runLaunch(environment, instanceType, idleTimeout, profile, region, availabilityZone string, dryRun bool, connectionMethod, subnetType string, createNatGateway, skipSystemUpgrade bool) error {
 	ctx := context.Background()
 
 	// Load QGIS environment configuration
@@ -132,7 +135,7 @@ func runLaunch(environment, instanceType, idleTimeout, profile, region, availabi
 		return executeDryRun(ctx, env, profile, region, idleTimeout, connectionMethod, subnetType, createNatGateway)
 	}
 
-	return executeLaunch(ctx, env, profile, region, availabilityZone, idleTimeoutSeconds, connectionMethod, subnetType, createNatGateway)
+	return executeLaunch(ctx, env, profile, region, availabilityZone, idleTimeoutSeconds, connectionMethod, subnetType, createNatGateway, skipSystemUpgrade)
 }
 
 // validateLaunchOptions validates connection method and subnet type
@@ -218,7 +221,7 @@ func executeDryRun(ctx context.Context, env *qgisconfig.QGISEnvironment, profile
 }
 
 // executeLaunch performs the actual instance launch
-func executeLaunch(ctx context.Context, env *qgisconfig.QGISEnvironment, profile, region, availabilityZone string, idleTimeoutSeconds int, connectionMethod, subnetType string, createNatGateway bool) error {
+func executeLaunch(ctx context.Context, env *qgisconfig.QGISEnvironment, profile, region, availabilityZone string, idleTimeoutSeconds int, connectionMethod, subnetType string, createNatGateway, skipSystemUpgrade bool) error {
 	out := output.DefaultFormatter()
 	out.Blank()
 	out.Header(fmt.Sprintf("Launching QGIS %s on %s", env.Name, env.InstanceType))
@@ -258,7 +261,7 @@ func executeLaunch(ctx context.Context, env *qgisconfig.QGISEnvironment, profile
 	}
 
 	// Select AMI and generate user data
-	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion, idleTimeoutSeconds)
+	amiID, userData, err := prepareInstanceImage(ctx, ec2Client, env, actualRegion, idleTimeoutSeconds, skipSystemUpgrade)
 	if err != nil {
 		return err
 	}
@@ -267,6 +270,12 @@ func executeLaunch(ctx context.Context, env *qgisconfig.QGISEnvironment, profile
 	instance, err := launchAndWaitForInstance(ctx, ec2Client, ssmClient, env, subnet, securityGroup, amiID, userData, keyInfo, instanceProfile)
 	if err != nil {
 		return err
+	}
+
+	// Save instance to local state
+	if err := saveInstanceToState(instance, env, actualRegion, keyInfo, securityGroup.ID); err != nil {
+		out.Warning(fmt.Sprintf("Failed to save instance to local state: %v", err))
+		out.Info("You can manually add it later or launch a new instance")
 	}
 
 	// Display connection information
@@ -420,7 +429,7 @@ func setupSecurityGroup(ctx context.Context, ec2Client *aws.EC2Client, vpcID, co
 }
 
 // prepareInstanceImage selects AMI and generates user data
-func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *qgisconfig.QGISEnvironment, region string, idleTimeoutSeconds int) (string, string, error) {
+func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *qgisconfig.QGISEnvironment, region string, idleTimeoutSeconds int, skipSystemUpgrade bool) (string, string, error) {
 	out := output.DefaultFormatter()
 	out.Step("🔍", "Selecting Ubuntu 22.04 LTS base image")
 
@@ -433,7 +442,7 @@ func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *qg
 	out.Success("Ubuntu 22.04 LTS image selected")
 
 	// Generate cloud-init user data with QGIS + DCV setup
-	userData, err := qgisconfig.GenerateUserData(env, idleTimeoutSeconds)
+	userData, err := qgisconfig.GenerateUserData(env, idleTimeoutSeconds, skipSystemUpgrade)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate user data: %w", err)
 	}
@@ -529,6 +538,42 @@ func waitForDCVReady(ctx context.Context, ssmClient *aws.SSMClient, instance *ty
 	}
 
 	return fmt.Errorf("%s", result.Message)
+}
+
+// saveInstanceToState saves the launched instance to local state for tracking
+func saveInstanceToState(instance *types.Instance, env *qgisconfig.QGISEnvironment, region string, keyInfo *aws.KeyPairInfo, securityGroup string) error {
+	state, err := config.LoadState()
+	if err != nil {
+		return fmt.Errorf("failed to load state: %w", err)
+	}
+
+	instanceID := awssdk.ToString(instance.InstanceId)
+	publicIP := ""
+	if instance.PublicIpAddress != nil {
+		publicIP = awssdk.ToString(instance.PublicIpAddress)
+	}
+
+	keyPairName := ""
+	if keyInfo != nil {
+		keyPairName = keyInfo.Name
+	}
+
+	// Create instance entry
+	state.Instances[instanceID] = &config.Instance{
+		ID:            instanceID,
+		Environment:   env.Name,
+		InstanceType:  env.InstanceType,
+		PublicIP:      publicIP,
+		KeyPair:       keyPairName,
+		LaunchedAt:    time.Now(),
+		Region:        region,
+		SecurityGroup: securityGroup,
+	}
+
+	// Record initial state
+	state.Instances[instanceID].RecordStateChange("running")
+
+	return state.Save()
 }
 
 // displayInstanceInfo shows the launched instance information

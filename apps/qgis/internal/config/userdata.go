@@ -9,15 +9,15 @@ import (
 )
 
 // GenerateUserData creates a cloud-init user data script for QGIS with DCV
-func GenerateUserData(env *QGISEnvironment, idleTimeoutSeconds int) (string, error) {
-	script := generateUserDataScript(env, idleTimeoutSeconds)
+func GenerateUserData(env *QGISEnvironment, idleTimeoutSeconds int, skipSystemUpgrade bool) (string, error) {
+	script := generateUserDataScript(env, idleTimeoutSeconds, skipSystemUpgrade)
 	// AWS expects user data to be base64 encoded
 	encoded := base64.StdEncoding.EncodeToString([]byte(script))
 	return encoded, nil
 }
 
 // generateUserDataScript creates the actual bash script for QGIS + DCV setup
-func generateUserDataScript(env *QGISEnvironment, idleTimeoutSeconds int) string {
+func generateUserDataScript(env *QGISEnvironment, idleTimeoutSeconds int, skipSystemUpgrade bool) string {
 	var sb strings.Builder
 
 	// Start with bash shebang and error handling
@@ -43,12 +43,18 @@ func generateUserDataScript(env *QGISEnvironment, idleTimeoutSeconds int) string
 	sb.WriteString(fmt.Sprintf("echo 'Environment: %s'\n", env.Description))
 	sb.WriteString(fmt.Sprintf("echo 'GPU Required: %v'\n\n", env.RequiresGPU))
 
-	// Update package lists (skip upgrade - AMI is regularly updated)
+	// Update package lists
 	sb.WriteString("# Update package lists\n")
 	sb.WriteString("log_progress 'Refreshing package lists'\n")
 	sb.WriteString("apt-get update -y\n")
-	// Skip apt-get upgrade - Ubuntu AMIs are updated regularly
-	// sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get upgrade -y\n")
+
+	// Optionally run system upgrade
+	if !skipSystemUpgrade {
+		sb.WriteString("log_progress 'Upgrading system packages'\n")
+		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get upgrade -y\n")
+	} else {
+		sb.WriteString("# Skipping apt-get upgrade for faster setup (--skip-system-upgrade=true)\n")
+	}
 	sb.WriteString("\n")
 
 	// Install SSM Agent
