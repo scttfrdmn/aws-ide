@@ -120,6 +120,17 @@ func GenerateDesktopInstallScript(desktopType string) string {
 		sb.WriteString("  xserver-xorg \\\n")
 		sb.WriteString("  openbox \\\n")
 		sb.WriteString("  lightdm\n\n")
+	case "ultra-minimal":
+		// Ultra-minimal: Just X server core + basic window manager for DCV
+		// No display manager - DCV handles session management
+		// Perfect for single-application remote desktop use
+		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get install -y \\\n")
+		sb.WriteString("  xserver-xorg-core \\\n")
+		sb.WriteString("  xserver-xorg-video-dummy \\\n")
+		sb.WriteString("  x11-xserver-utils \\\n")
+		sb.WriteString("  openbox \\\n")
+		sb.WriteString("  dbus-x11 \\\n")
+		sb.WriteString("  fonts-dejavu-core\n\n")
 	default:
 		// Default to XFCE for unknown types
 		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get install -y \\\n")

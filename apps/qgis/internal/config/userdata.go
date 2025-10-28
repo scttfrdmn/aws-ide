@@ -43,11 +43,13 @@ func generateUserDataScript(env *QGISEnvironment, idleTimeoutSeconds int) string
 	sb.WriteString(fmt.Sprintf("echo 'Environment: %s'\n", env.Description))
 	sb.WriteString(fmt.Sprintf("echo 'GPU Required: %v'\n\n", env.RequiresGPU))
 
-	// Update system
-	sb.WriteString("# Update system packages\n")
-	sb.WriteString("log_progress 'Updating system packages'\n")
+	// Update package lists (skip upgrade - AMI is regularly updated)
+	sb.WriteString("# Update package lists\n")
+	sb.WriteString("log_progress 'Refreshing package lists'\n")
 	sb.WriteString("apt-get update -y\n")
-	sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get upgrade -y\n\n")
+	// Skip apt-get upgrade - Ubuntu AMIs are updated regularly
+	// sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get upgrade -y\n")
+	sb.WriteString("\n")
 
 	// Install SSM Agent
 	sb.WriteString("# Install AWS Systems Manager Agent\n")
@@ -61,8 +63,8 @@ func generateUserDataScript(env *QGISEnvironment, idleTimeoutSeconds int) string
 		sb.WriteString(dcv.GenerateGPUSetupScript())
 	}
 
-	// Install desktop environment (MATE for lightweight performance)
-	sb.WriteString(dcv.GenerateDesktopInstallScript("mate"))
+	// Install desktop environment (ultra-minimal for fastest installation)
+	sb.WriteString(dcv.GenerateDesktopInstallScript("ultra-minimal"))
 
 	// Install QGIS and related packages
 	sb.WriteString(generateQGISInstallScript(env))
