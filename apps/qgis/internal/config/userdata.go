@@ -61,8 +61,8 @@ func generateUserDataScript(env *QGISEnvironment, idleTimeoutSeconds int) string
 		sb.WriteString(dcv.GenerateGPUSetupScript())
 	}
 
-	// Install desktop environment (XFCE for lightweight performance)
-	sb.WriteString(dcv.GenerateDesktopInstallScript("xfce"))
+	// Install desktop environment (MATE for lightweight performance)
+	sb.WriteString(dcv.GenerateDesktopInstallScript("mate"))
 
 	// Install QGIS and related packages
 	sb.WriteString(generateQGISInstallScript(env))

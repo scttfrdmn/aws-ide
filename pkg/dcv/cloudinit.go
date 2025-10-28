@@ -111,6 +111,10 @@ func GenerateDesktopInstallScript(desktopType string) string {
 		sb.WriteString("  xfce4 \\\n")
 		sb.WriteString("  xfce4-goodies \\\n")
 		sb.WriteString("  lightdm\n\n")
+	case "mate":
+		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get install -y \\\n")
+		sb.WriteString("  mate-desktop-environment-core \\\n")
+		sb.WriteString("  lightdm\n\n")
 	case "minimal":
 		sb.WriteString("DEBIAN_FRONTEND=noninteractive apt-get install -y \\\n")
 		sb.WriteString("  xserver-xorg \\\n")
