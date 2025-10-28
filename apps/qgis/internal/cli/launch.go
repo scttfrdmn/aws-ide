@@ -426,7 +426,7 @@ func prepareInstanceImage(ctx context.Context, ec2Client *aws.EC2Client, env *qg
 
 	// QGIS requires Ubuntu 22.04 (jammy) for the QGIS repository
 	amiSelector := aws.NewAMISelector(region)
-	amiID, err := amiSelector.GetAMI(ctx, ec2Client, "ubuntu-jammy-x86_64")
+	amiID, err := amiSelector.GetAMI(ctx, ec2Client, "ubuntu22-x86_64")
 	if err != nil {
 		return "", "", fmt.Errorf("failed to find Ubuntu 22.04 AMI: %w", err)
 	}
