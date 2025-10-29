@@ -48,8 +48,9 @@ func GenerateDCVInstallScript(cfg *Config) string {
 	sb.WriteString("idle-timeout=0\n")
 	sb.WriteString("max-concurrent-clients=1\n")
 	sb.WriteString("\n")
-	sb.WriteString("[session-management/automatic-console-session]\n")
-	sb.WriteString(fmt.Sprintf("owner=\"%s\"\n", cfg.Owner))
+	// NOTE: Do NOT use automatic-console-session - it bypasses the init script
+	// and prevents proper XFCE configuration. Session creator service handles
+	// session creation with --init parameter for proper desktop initialization.
 	sb.WriteString("\n")
 	sb.WriteString("[display]\n")
 	sb.WriteString("enable-cu-desktops=true\n")

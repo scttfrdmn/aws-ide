@@ -167,6 +167,27 @@ func generateQGISInstallScript(env *QGISEnvironment) string {
 		sb.WriteString("log_progress 'QGIS installation complete'\n\n")
 	}
 
+	// Create QGIS user directories before first launch
+	// Fixes: GitHub Issue #57 - QGIS error "Can not make qgis.db private copy"
+	sb.WriteString("# Pre-create QGIS user directories to prevent startup errors\n")
+	sb.WriteString("log_progress 'Creating QGIS user directories'\n")
+	sb.WriteString("mkdir -p /home/ubuntu/.local/share/QGIS/QGIS3\n")
+	sb.WriteString("mkdir -p /home/ubuntu/.local/share/QGIS/QGIS3/profiles/default\n")
+	sb.WriteString("chown -R ubuntu:ubuntu /home/ubuntu/.local\n\n")
+
+	// Configure PolicyKit to allow ubuntu user to create color managed devices
+	// Fixes: GitHub Issue #57 - Authentication dialog "create a color managed device"
+	sb.WriteString("# Allow ubuntu user to create color managed devices without authentication\n")
+	sb.WriteString("log_progress 'Configuring colord PolicyKit permissions'\n")
+	sb.WriteString("cat > /etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla << 'EOF'\n")
+	sb.WriteString("[Allow Color Manager for ubuntu user]\n")
+	sb.WriteString("Identity=unix-user:ubuntu\n")
+	sb.WriteString("Action=org.freedesktop.color-manager.create-device\n")
+	sb.WriteString("ResultAny=no\n")
+	sb.WriteString("ResultInactive=no\n")
+	sb.WriteString("ResultActive=yes\n")
+	sb.WriteString("EOF\n\n")
+
 	// Install QGIS plugins if specified
 	if len(env.QGISPlugins) > 0 {
 		sb.WriteString("# Configure QGIS plugins\n")
