@@ -139,8 +139,6 @@ func GenerateDCVSessionCreatorService(cfg *Config) string {
 	sb.WriteString("ExecStartPre=/usr/local/bin/wait-for-dcv-ready.sh\n")
 	sb.WriteString(fmt.Sprintf("ExecStart=/usr/bin/dcv create-session --type=%s --owner %s --init /opt/dcv-session/init-%s.sh %s\n",
 		cfg.SessionType, cfg.Owner, cfg.SessionName, cfg.SessionName))
-	sb.WriteString("Restart=on-failure\n")
-	sb.WriteString("RestartSec=10\n")
 	sb.WriteString("\n")
 	sb.WriteString("[Install]\n")
 	sb.WriteString("WantedBy=multi-user.target\n")
